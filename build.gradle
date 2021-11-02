@@ -1,0 +1,181 @@
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'application'
+mainClassName = 'com.reliancy.jabba.Router'
+repositories { 
+    mavenLocal()
+    mavenCentral() 
+}
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+dependencies {
+    implementation "org.eclipse.jetty:jetty-server:11.0.1"
+    implementation "org.slf4j:slf4j-simple:2.0.0-alpha0"
+    implementation 'com.hubspot.jinjava:jinjava:2.5.10'
+    implementation 'com.hubspot.jinjava:jinjava:2.5.10'
+    implementation 'com.h2database:h2:1.4.200'
+    // https://mvnrepository.com/artifact/org.postgresql/postgresql
+    implementation 'org.postgresql:postgresql:42.3.1'
+    // https://mvnrepository.com/artifact/com.zaxxer/HikariCP
+    implementation 'com.zaxxer:HikariCP:5.0.0'
+
+    testImplementation "junit:junit:4.12"
+}
+test {
+  testLogging {
+    // Make sure output from
+    // standard out or error is shown
+    // in Gradle output.
+    outputs.upToDateWhen {false}
+    showStandardStreams = true
+    exceptionFormat = 'full'
+    // Or we use events method:
+    // events 'standard_out', 'standard_error'
+
+    // Or set property events:
+    // events = ['standard_out', 'standard_error']
+
+    // Instead of string values we can
+    // use enum values:
+    // events org.gradle.api.tasks.testing.logging.TestLogEvent.STANDARD_OUT,
+    //        org.gradle.api.tasks.testing.logging.TestLogEvent.STANDARD_ERROR,
+  }  
+}
+jar {
+    archiveBaseName = 'jabba'
+    archiveVersion =  '0.1'
+    manifest {
+        attributes "Main-Class": mainClassName
+        attributes "Class-Path": configurations.runtimeClasspath.collect { it.getName() }.join(' ')
+    }
+}
+task copyToLib(type: Copy) {
+    into "${buildDir}/libs" from configurations.runtimeClasspath
+}
+build.dependsOn(copyToLib)
+task fat_jar(type: Jar) {
+    archiveBaseName = 'fat-jabba'
+    archiveVersion =  '0.1'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    /*
+    manifest {
+        attributes "Main-Class": mainClassName
+        attributes "Class-Path": configurations.runtimeClasspath.collect { it.getName() }.join(' ')
+    }
+    */
+    from { 
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } 
+    }{
+        exclude "META-INF/NOTICE.txt"    
+        exclude "META-INF/LICENSE"    
+    }
+    with jar
+}
+/**
+We define a singleton pattern using background thread to launch a blocking process.
+Later we make sure to terminate previous running driver threads before starting new.
+Also we split start, stop because we might not run in continouse mode.
+ */
+class Server implements Runnable{
+  static Server singleton=null;
+  public static Server getSingleton(){
+    if(singleton==null){
+      System.out.println("creating new server");
+      singleton=new Server();
+    }
+    return singleton;
+  }
+  org.slf4j.Logger log=org.slf4j.LoggerFactory.getLogger("server.driver");
+  Thread driver=null;
+  Runnable task=null;
+  protected Server(){}
+  public void info(String msg){
+    System.out.println(msg);
+  }
+  public Server useDriver(boolean f){
+    info("using driver:"+f);
+    if(f){
+      driver=new Thread(this);
+      driver.setName("server.driver");
+    }else{
+      driver=null;
+    }
+    return this;
+  }
+  public void run(){
+    info("running task");
+    try{
+      task.run();
+    }catch(java.lang.InterruptedException ex){
+      info("running task:interrupted");
+    }catch(org.gradle.internal.UncheckedException ex2){
+      info("running task:interrupted2");
+    }
+  }
+  public Server start(Runnable c){
+    info("starting server");
+    this.task=c;
+    if(driver!=null) 
+      driver.start(); 
+    else     
+      this.run();
+    return this;
+  }
+  public Server stop(){
+    info("stopping server");
+    if(driver!=null){
+      driver.interrupt();
+      driver.join();
+    }
+    for(Thread th:Thread.getAllStackTraces().keySet()){
+      if(th.getName().equalsIgnoreCase("executor")){
+        info("cleaning up stale driver:"+th.toString())
+        th.stop();
+      }
+      if(th.getName().equalsIgnoreCase("server.driver")){
+        info("cleaning up stale driver:"+th.toString())
+        th.stop();
+      }
+    }
+    return this;
+  }
+}
+task runServer{
+  inputs.files 'src'
+  doFirst {
+    //println 'This is executed first during the execution phase.'
+    Server.getSingleton().stop();
+    Server.getSingleton().useDriver(project.gradle.startParameter.continuous);
+  }
+  doLast {
+    //println 'This is executed last during the execution phase.'
+    Server.getSingleton().start({
+        project.javaexec {
+          classpath = project.sourceSets.main.runtimeClasspath
+          main = mainClassName
+        } 
+    });
+  }
+  /* 
+  group = 'Run' // <-- change the name as per your need
+  description = 'execute run but continously'
+  classpath sourceSets.main.runtimeClasspath // <-- Don't change this
+  main = mainClassName
+  //args "arg1", "arg2"  
+  */
+}
+// build.gradle
+eclipse.classpath {
+  defaultOutputDir = file("build") ///default
+  file.whenMerged { cp ->
+    cp.entries.forEach { cpe ->
+      if (cpe instanceof org.gradle.plugins.ide.eclipse.model.SourceFolder) {
+        cpe.output = cpe.output.replace "bin/", "build/classes/java/"
+      }
+      if (cpe instanceof org.gradle.plugins.ide.eclipse.model.Output) {
+        cpe.path = cpe.path.replace "bin/", "build/"
+      }
+    }
+  }
+}
