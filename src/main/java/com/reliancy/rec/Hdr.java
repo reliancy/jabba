@@ -1,16 +1,23 @@
 package com.reliancy.rec;
 
 import java.util.ArrayList;
-import java.util.ListIterator;
+import java.util.Iterator;
+import java.util.List;
 
 /** Base class of meta objects.
  * We use it to describe certain meta information. We derive from it Slot.
- * We define keys list of slots on the header level to describe slots.
+ * We define keys list of slots on the header level to describe sub-slots.
+ * 
+ * This class describes structure of Fields or Entities via the keys array of slots.
+ * Additionally we provide a number of methods to locate, set or get or remove or add slots.
+ * However slots could reside in other places such as base classes and so getOwnSlots will return a 
+ * bare list of slots in this object while all other methods will take into account other sources.
+ * We do this to stay consistent at Rec level when Hdr inheritance comes into play.
  */
 public class Hdr {
     public static final int FLAG_ARRAY      =0x0001;
     public static final int FLAG_CHANGED    =0x0002;
-    public static final int FLAG_HIDDEN     =0x0004;
+    public static final int FLAG_STORABLE   =0x0004;
     public static final int FLAG_LOCKED     =0x0008;
     int flags;
     String name;
@@ -30,8 +37,11 @@ public class Hdr {
     @Override
     public String toString(){
         StringBuilder ret=new StringBuilder();
-        ret.append("{").append("flags:").append(flags).append(",name:").append(name);
-        ret.append(",dim:").append(keys.size()).append("}");
+        ret.append(name).append(":");
+        ret.append("{")
+            .append("flags:").append(flags)
+            .append(",dim:").append(count())
+            .append("}");
         return ret.toString();
     }
 
@@ -53,6 +63,9 @@ public class Hdr {
     public void setType(Class<?> type) {
         this.type = type;
     }
+    public int getFlags(){
+        return flags;
+    }
     public Hdr raiseFlags(int f){
         flags|=f;
         return this;
@@ -67,36 +80,51 @@ public class Hdr {
     public <T extends Hdr> T castAs(Class<T> clazz){
         return clazz.cast(this);
     }
-    public int findSlot(String name){
-        return findSlot(name,0);
+    public List<Slot> getOwnSlots(){
+        return keys;
     }
-    public int findSlot(String name,int ofs){
-        ListIterator<Slot> it=keys.listIterator(ofs);
+    public boolean isOwned(Slot s){
+        return keys.contains(s);
+    }
+    public Iterator<Slot> iterator(int offset){
+        return keys.listIterator(offset);
+    }
+    public int indexOf(String name){
+        return indexOf(name,0);
+    }
+    public int indexOf(String name,int ofs){
+        Iterator<Slot> it=iterator(ofs);
+        int index=-1;
         while(it.hasNext()){
-            int index=it.nextIndex();
+            index+=1;
             Slot e=it.next();
-            if(e.getName().equalsIgnoreCase(name)) return index;
+            //if(e.getName().equalsIgnoreCase(name)) return index;
+            if(e.equals(name)) return index;
         }
         return -1;
     }
-    public int findSlot(Slot s,int ofs){
-        ListIterator<Slot> it=keys.listIterator(ofs);
+    public int indexOf(Slot s,int ofs){
+        Iterator<Slot> it=iterator(ofs);
+        int index=-1;
         while(it.hasNext()){
-            int index=it.nextIndex();
+            index+=1;
             Slot e=it.next();
             if(e==s) return index;
         }
         return -1;
     }
-        /**
+    public Slot makeSlot(String name){
+        return new Slot(name);
+    }
+    /**
      * this version will get or create a slot by given name.
      * @param name
      * @return
      */
-    public Slot getSlot(String name){
-        int index=findSlot(name);
+    public Slot getSlot(String name,boolean make){
+        int index=indexOf(name);
         if(index<0){
-             return new Slot(name);
+             return make?makeSlot(name):null;
         }else{
             return getSlot(index);
         }
@@ -116,11 +144,7 @@ public class Hdr {
         keys.set(index,s);
         return this;
     }
-    public Slot[] slots(Slot... slots){
-        if(slots!=null && slots.length>0){
-            keys.clear();
-            for(int i=0;i<slots.length;i++) keys.add(slots[i]);
-        }
-        return keys.toArray(new Slot[keys.size()]);
+    public int count(){
+        return keys.size();
     }
 }

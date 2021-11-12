@@ -189,7 +189,7 @@ public class JSONEncoder{
         if (o != null) {
             o.append(val.isArray()?"[":"{");
         }
-        for (int i=0;i<val.count();i++) {
+		for (int i=0;i<val.count();i++) {
             Slot k=val.getSlot(i);
             Object v=val.get(i);
             if (i > 0) {

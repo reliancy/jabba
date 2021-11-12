@@ -1,20 +1,28 @@
 package com.reliancy.util;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URL;
-import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
 
+import com.github.jknack.handlebars.Handlebars;
+import com.github.jknack.handlebars.io.AbstractTemplateLoader;
+import com.github.jknack.handlebars.io.TemplateSource;
+import com.github.jknack.handlebars.io.URLTemplateSource;
+
+/*
 import com.hubspot.jinjava.Jinjava;
 import com.hubspot.jinjava.interpret.JinjavaInterpreter;
 import com.hubspot.jinjava.loader.ResourceLocator;
+*/
 
 /**
  * We will manage template rendering thru this class.
  */
 public class Template {
+    /*
     static Jinjava jinjava;
     static{
         jinjava = new Jinjava();
@@ -32,6 +40,27 @@ public class Template {
             }
         }
     }
+    */
+    public static class HBLoader extends AbstractTemplateLoader{
+        public HBLoader(){
+            this.setPrefix("/templates/");
+        }
+        @Override
+        public TemplateSource sourceAt(String location) throws IOException {
+            String fullpath=this.resolve(location);
+            URL loc=Resources.findFirst(null,fullpath,Template.search_path);
+            System.out.println(location+":"+loc+":"+fullpath);
+            if (loc == null) {
+                Logger.getLogger(Template.class.getSimpleName()).warning("Missing template"+fullpath);
+                throw new FileNotFoundException(location);
+            }
+            return new URLTemplateSource(location,loc);            
+        }
+
+        
+    }
+    static Handlebars handlebars = new Handlebars(new HBLoader());
+    
     static Object[] search_path;
     static HashMap<String,Template> cache=new HashMap<>();
     /** renders a template to string, possibly locates it first.
@@ -56,7 +85,6 @@ public class Template {
         Template ret=cache.get(path);
         if(ret!=null) return ret;
         URL loc=Resources.findFirst(null, path, (sp!=null && sp.length>0?sp:search_path));
-        System.out.println("TLOCL:"+loc);
         if(loc==null) return null;
         ret=new Template(loc);
         cache.put(path,ret);
@@ -66,7 +94,7 @@ public class Template {
         if(sp!=null && sp.length>0) search_path=sp;
         return search_path;
     }
-
+    com.github.jknack.handlebars.Template recipe;
     final URL location;
     String source;
     public Template(URL location){
@@ -88,7 +116,11 @@ public class Template {
     }
     public CharSequence render(Map<String,?> context) throws IOException{
         if(source==null) load();
-        String ret = jinjava.render(source, context);
+        //String ret = jinjava.render(source, context);
+        if(recipe==null){
+            recipe=handlebars.compileInline(source);
+        }
+        String ret=recipe.apply(context);
         return ret;
     }
 }

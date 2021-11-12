@@ -25,6 +25,13 @@ public interface Terminal {
     public default Terminal meta(Entity ent){
         return null;
     }
+    public default <T extends DBO> T load(Class<T> cls,Object...id) throws IOException {
+        Entity ent=Entity.recall(cls);
+        String sig="/"+ent.getName()+"/load";
+        try(Action act=begin(sig).load(ent).limit(1).if_pk(id).execute()){
+            return (T)act.first();
+        }
+    }
     public default DBO load(Entity ent,Object...id) throws IOException {
         String sig="/"+ent.getName()+"/load";
         try(Action act=begin(sig).load(ent).limit(1).if_pk(id).execute()){
@@ -39,6 +46,7 @@ public interface Terminal {
         }
     }
     public default boolean delete(DBO rec) throws IOException {
+        if(rec==null) return false;
         Entity ent=rec.getType();
         String sig="/"+ent.getName()+"/delete";
         try(Action act=begin(sig).delete(ent).setItems(rec).execute()){

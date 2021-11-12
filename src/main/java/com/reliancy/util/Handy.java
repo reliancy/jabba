@@ -45,7 +45,7 @@ public final class Handy {
         if(clazz.isAssignableFrom(val.getClass())) return clazz; // we are assignable
         if(val instanceof String){
             String value=(String) val;
-            if(value.isBlank() || value.equals("''") || value.equals("\"\"")) return null;
+            if(value.isEmpty() || value.equals("''") || value.equals("\"\"")) return null;
             if( Boolean.class==( clazz ) || boolean.class==( clazz ) ) return Boolean.parseBoolean( value );
             if( Byte.class==( clazz ) || byte.class==( clazz ) ) return Byte.parseByte( value );
             if( Short.class==( clazz ) || short.class==( clazz ) ) return Short.parseShort( value );
@@ -454,5 +454,31 @@ public final class Handy {
 		all.toArray(ret);
 		return ret;
 	}
-
+	public static String toString(Object...args){
+		StringBuilder buf=new StringBuilder();
+		if(args.length>1){
+			buf.append("[");
+			for(int i=0;i<args.length;i++) buf.append(i==0?"":",").append(toString(args[i]));
+			buf.append("]");
+		}else if(args.length==1){
+			Object arg=args[0];
+			if(arg instanceof Iterable){
+				java.util.Iterator<?> it=((Iterable<?>)arg).iterator();
+				buf.append("[");
+				while(it.hasNext()) buf.append(buf.length()>1?",":"").append(it.next());
+				buf.append("]");
+			}else
+			if(arg instanceof java.util.Map){
+				java.util.Map<?,?> marg=(Map<?,?>) arg;
+				buf.append("{");
+				for(java.util.Map.Entry<?,?>e:marg.entrySet()){
+					buf.append(e.getKey().toString()).append(":").append(toString(e.getValue()));
+				}
+				buf.append("}");
+			}else{
+				buf.append(String.valueOf(arg));
+			}
+		}
+		return buf.toString();
+	}
 }

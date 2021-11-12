@@ -11,7 +11,7 @@ public interface Rec extends Vec{
     public Rec remove(Slot s);
     public default Slot getSlot(String name){
         Hdr m=meta();
-        return m!=null?m.getSlot(name):null;
+        return m!=null?m.getSlot(name,true):null;
     }
     public default Slot getSlot(int pos){
         Hdr m=meta();

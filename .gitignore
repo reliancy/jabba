@@ -1,6 +1,9 @@
 .vscode/
 !.vscode/launch.json
-
+build/
+dist/
+target/
+var/
 ### Java ###
 *.class
 
@@ -21,9 +24,6 @@ hs_err_pid*
 
 ### Gradle ###
 .gradle
-build/
-dist/
-target/
 
 # Ignore Gradle GUI config
 gradle-app.setting

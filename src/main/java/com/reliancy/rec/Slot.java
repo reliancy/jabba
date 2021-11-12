@@ -11,7 +11,7 @@ public class Slot extends Hdr {
         Object getInitalValue(Slot s,Rec rec);
     }
     public static final Initializer DEFAULT_INITIALIZER=new Initializer(){
-        public Object getInitalValue(Slot s,Rec rec) {return s.getDefaultValue();}
+        public Object getInitalValue(Slot s,Rec rec) {return s.getInitValue();}
     };
     int position;
     Object defaultValue;
@@ -25,23 +25,29 @@ public class Slot extends Hdr {
         this.position=-1;
         this.initValue=DEFAULT_INITIALIZER;
     }
+    public boolean equals(String str){
+        return name.equalsIgnoreCase(str);
+    }
     public int getPosition() {
         return position;
     }
-    public void setPosition(int position) {
+    public Slot setPosition(int position) {
         this.position = position;
+        return this;
     }
-    public Object getDefaultValue() {
+    public Object getInitValue() {
         return defaultValue;
     }
-    public void setDefaultValue(Object defaultValue) {
+    public Slot setInitValue(Object defaultValue) {
         this.defaultValue = defaultValue;
+        return this;
     }
-    public Initializer getInitValue() {
+    public Initializer getInitVia() {
         return initValue;
     }
-    public void setInitValue(Initializer initValue) {
+    public Slot setInitVia(Initializer initValue) {
         this.initValue = initValue;
+        return this;
     }
     public int toString(Object val, StringBuilder buf) {
         int length0=buf.length();

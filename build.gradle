@@ -1,7 +1,23 @@
+/**
+Local repostories:
+Unix - ~/.m2
+Windows - C:\Users\<username>\.m2
+For example - /Users/alex/.m2/repository/<library_path>/<version>/<name>.<extension>
+ */
+
 apply plugin: 'java'
 apply plugin: 'eclipse'
 apply plugin: 'application'
-mainClassName = 'com.reliancy.jabba.Router'
+apply plugin: 'maven-publish'
+
+group='com.reliancy'
+version = '0.1'
+mainClassName = group+'.'+name+'.Router'
+System.out.println("group:"+group);
+System.out.println("name:"+name);
+System.out.println("version:"+version);
+System.out.println("entry:"+mainClassName);
+
 repositories { 
     mavenLocal()
     mavenCentral() 
@@ -12,8 +28,8 @@ targetCompatibility = 1.8
 dependencies {
     implementation "org.eclipse.jetty:jetty-server:11.0.1"
     implementation "org.slf4j:slf4j-simple:2.0.0-alpha0"
-    implementation 'com.hubspot.jinjava:jinjava:2.5.10'
-    implementation 'com.hubspot.jinjava:jinjava:2.5.10'
+    //implementation 'com.hubspot.jinjava:jinjava:2.5.10'
+    implementation 'com.github.jknack:handlebars:4.2.1'
     implementation 'com.h2database:h2:1.4.200'
     // https://mvnrepository.com/artifact/org.postgresql/postgresql
     implementation 'org.postgresql:postgresql:42.3.1'
@@ -43,20 +59,21 @@ test {
   }  
 }
 jar {
-    archiveBaseName = 'jabba'
-    archiveVersion =  '0.1'
+    archiveBaseName = project.name
+    archiveVersion =  project.version
     manifest {
         attributes "Main-Class": mainClassName
         attributes "Class-Path": configurations.runtimeClasspath.collect { it.getName() }.join(' ')
     }
 }
 task copyToLib(type: Copy) {
-    into "${buildDir}/libs" from configurations.runtimeClasspath
+    //into "${buildDir}/libs" from configurations.runtimeClasspath
+    into layout.buildDirectory.dir("libs") from configurations.runtimeClasspath
 }
-build.dependsOn(copyToLib)
+build.finalizedBy(copyToLib)
 task fat_jar(type: Jar) {
-    archiveBaseName = 'fat-jabba'
-    archiveVersion =  '0.1'
+    archiveBaseName = 'fat-'+project.name
+    archiveVersion =  project.version
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     /*
     manifest {
@@ -86,7 +103,7 @@ class Server implements Runnable{
     }
     return singleton;
   }
-  org.slf4j.Logger log=org.slf4j.LoggerFactory.getLogger("server.driver");
+  //org.slf4j.Logger log=org.slf4j.LoggerFactory.getLogger("server.driver");
   Thread driver=null;
   Runnable task=null;
   protected Server(){}
@@ -107,10 +124,8 @@ class Server implements Runnable{
     info("running task");
     try{
       task.run();
-    }catch(java.lang.InterruptedException ex){
+    }catch(java.lang.Exception ex){
       info("running task:interrupted");
-    }catch(org.gradle.internal.UncheckedException ex2){
-      info("running task:interrupted2");
     }
   }
   public Server start(Runnable c){
@@ -165,16 +180,21 @@ task runServer{
   //args "arg1", "arg2"  
   */
 }
-// build.gradle
-eclipse.classpath {
-  defaultOutputDir = file("build") ///default
-  file.whenMerged { cp ->
-    cp.entries.forEach { cpe ->
-      if (cpe instanceof org.gradle.plugins.ide.eclipse.model.SourceFolder) {
-        cpe.output = cpe.output.replace "bin/", "build/classes/java/"
-      }
-      if (cpe instanceof org.gradle.plugins.ide.eclipse.model.Output) {
-        cpe.path = cpe.path.replace "bin/", "build/"
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
+}
+eclipse{
+  classpath {
+    defaultOutputDir = file("build") ///default
+    file.whenMerged { cp ->
+      cp.entries.forEach { cpe ->
+        if (cpe.kind == 'src' && cpe.hasProperty('output')) {
+          cpe.output = cpe.output.replace('bin/', "build/classes/java/")
+        }
       }
     }
   }

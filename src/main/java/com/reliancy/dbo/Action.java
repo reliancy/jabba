@@ -1,35 +1,47 @@
 package com.reliancy.dbo;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Iterator;
-
-import com.reliancy.util.CloseableIterator;
 
 /** Description of a terminal operation with a slice of dbo objects as input or output.
  * This object is not just for reading but also bulk updating.
  * It will be used to describe a multi DBO read or write and to then also track results.
+ * At its core are action traits which are classes that define either loading,saving or deleting.
+ * The items field is a consumable object when consumed the action is done.
+ * So for loading we iterate once done it cannot be done again. Also when items are provided for saving
+ * once iterated over and saved they we done.
  */
-public class Action implements Iterable<DBO>,CloseableIterator<DBO>{
-    public static enum Type{
-        NONE,LOAD,SAVE,DELETE
+public class Action implements Iterable<DBO>,SiphonIterator<DBO>{
+    public static class Trait{
+        public String toString(){return getClass().getSimpleName();}
     }
+    public static class Load extends Trait{
+        int limit,offset;
+        Check filter;
+    }
+    public static class Save extends Trait{
+
+    }
+    public static class Delete extends Trait{
+        Check filter;
+    }
+
     Terminal terminal;
-    Type type;
+    Trait trait;
     Entity entity;
     Object[] params;
-    CloseableIterator<DBO> items;
-    int limit,offset;
-    Condition filter;
+    SiphonIterator<DBO> items;
 
     public Action(){
-        type=Type.NONE;
+        trait=null;
     }
-    public Action(Type t){
-        type=t;
+    public Action(Trait t){
+        trait=t;
     }
     public Action(Terminal t){
         terminal=t;
-        type=Type.NONE;
+        trait=null;
     }
     public Action execute() throws IOException{
         return terminal.execute(this);
@@ -42,11 +54,11 @@ public class Action implements Iterable<DBO>,CloseableIterator<DBO>{
         this.terminal = terminal;
         return this;
     }
-    public Type getType() {
-        return type;
+    public Trait getTrait() {
+        return trait;
     }
-    public Action setType(Type type) {
-        this.type = type;
+    public Action setTrait(Trait t) {
+        this.trait = t;
         return this;
     }
     public Entity getEntity() {
@@ -58,22 +70,27 @@ public class Action implements Iterable<DBO>,CloseableIterator<DBO>{
     }
     public void clear(){
         terminal=null;
-        type=Type.NONE;
+        trait=null;
         entity=null;
         setItems((DBO)null);
     }
     public Action load(Entity ent){
-        type=Type.LOAD;
+        trait=new Load();
         entity=ent;
         return this;
     }
+    public Action load(Class<? extends DBO> cls){
+        trait=new Load();
+        entity=Entity.recall(cls);
+        return this;
+    }
     public Action save(Entity ent){
-        type=Type.SAVE;
+        trait=new Save();
         entity=ent;
         return this;
     }
     public Action delete(Entity ent){
-        type=Type.DELETE;
+        trait=new Delete();
         entity=ent;
         return this;
     }
@@ -81,10 +98,10 @@ public class Action implements Iterable<DBO>,CloseableIterator<DBO>{
         params=p;
         return this;
     }
-    public Action setItems(DBO ...itms){
-        CloseableIterator<DBO> it=null;
+    public Action setItems(final DBO ...itms){
+        SiphonIterator<DBO> it=null;
         if(itms!=null){
-            it=new CloseableIterator<DBO>() {
+            it=new SiphonIterator<DBO>() {
                 private int index = 0;
                 @Override
                 public boolean hasNext() {
@@ -101,7 +118,28 @@ public class Action implements Iterable<DBO>,CloseableIterator<DBO>{
         }
         return setItems(it);
     }
-    public Action setItems(CloseableIterator<DBO> itms){
+    public Action setItems(final Collection<DBO> itms){
+        SiphonIterator<DBO> it=null;
+        if(itms!=null){
+            it=new SiphonIterator<DBO>() {
+                private final Iterator<DBO> str = itms.iterator();
+                @Override
+                public boolean hasNext() {
+                    return str.hasNext();
+                }
+                @Override
+                public DBO next() {
+                    return str.next();
+                }
+                @Override
+                public void close() throws IOException {
+                }
+            };
+        }
+        return setItems(it);
+    }
+    public Action setItems(SiphonIterator<DBO> itms){
+        if(items==itms) return this;
         if(items!=null){
             try {
                 items.close();
@@ -111,7 +149,7 @@ public class Action implements Iterable<DBO>,CloseableIterator<DBO>{
         items=itms;
         return this;
     }
-    protected CloseableIterator<DBO> getItems(){
+    protected SiphonIterator<DBO> getItems(){
         return items;
     }
     @Override
@@ -130,30 +168,51 @@ public class Action implements Iterable<DBO>,CloseableIterator<DBO>{
     public void close() throws IOException {
         if(items!=null){
             items.close();
+            items=null;
             if(terminal!=null) terminal.end(this);
         }
-        items=null;
     }
     public Action limit(int max) {
-        limit=max;
+        ((Load)trait).limit=max;
         return this;
     }
-    public Action if_filter(Condition... c){
+    public Action filterBy(Check... c){
+        Check filter=null;
         if(c!=null){
-            if(c.length>1) filter=Condition.and(c);
+            if(c.length>1) filter=Check.and(c);
             else filter=c[0];
+        }
+        if(trait instanceof Load){
+            ((Load)trait).filter=filter;
+        }else
+        if(trait instanceof Delete){
+            ((Delete)trait).filter=filter;
         }else{
-            filter=null;
+            throw new IllegalStateException("filtering not supported by trait:"+trait);
         }
         return this;
     }
-    public Action if_pk(Object[] id) {
+    public Check getFilter(){
+        if(trait instanceof Load){
+            return ((Load)trait).filter;
+        }else
+        if(trait instanceof Delete){
+            return ((Delete)trait).filter;
+        }else{
+            throw new IllegalStateException("filtering not supported by trait:"+trait);
+        }
+    }
+    public Action if_pk(Object... id) {
         Field pk=entity.getPk();
-        return if_filter(Condition.eq(pk,id));
+        return filterBy(pk.eq(id));
     }
     public DBO first() {
         try{
-            return items!=null?items.next():null;
+            if(this.hasNext()){
+                return this.next();
+            }else{
+                return null;
+            }
         }finally{
             clear();
         }

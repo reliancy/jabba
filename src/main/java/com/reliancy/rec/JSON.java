@@ -17,6 +17,13 @@ public class JSON {
     public static final void writes(Rec rec,Appendable sink) throws IOException{
         JSONEncoder.encode(rec, sink);
     }
-
+    public static final String toString(Rec rec){
+        StringBuffer buf=new StringBuffer();
+        try {
+            writes(rec,buf);
+        } catch (IOException e) {
+        }
+        return buf.toString();
+    }
 
 }

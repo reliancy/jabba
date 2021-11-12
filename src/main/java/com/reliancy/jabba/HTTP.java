@@ -47,8 +47,13 @@ public final class HTTP {
     public static String guess_mime(Object ret) {
         if(ret instanceof CharSequence){
             CharSequence retstr=(CharSequence)ret;
-            if(retstr.length()>0 && retstr.charAt(0)=='<') return "text/html";
-            if(retstr.length()>0 && "{[".indexOf(retstr.charAt(0))!=-1) return "application/json";
+            for(int index=0;index<retstr.length();index++){
+                char ch=retstr.charAt(index);
+                if(Character.isWhitespace(ch)) continue;
+                if(ch=='<') return "text/html";
+                if(ch=='{' || ch=='[') return "application/json";
+                break;
+            }
             return "text/plain";
         }
         if(ret instanceof byte[]){

@@ -206,7 +206,7 @@ public class Router extends AbstractHandler{
         String ret="";
         try {
                 Template.search_path("./var",SecurityPolicy.class);
-                Template t=Template.find("resources/login.j2");
+                Template t=Template.find("/templates/login.hbs");
                 System.out.println("Template:"+t);
                 ret = t.render(context).toString();
         } catch (IOException e) {

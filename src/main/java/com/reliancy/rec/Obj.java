@@ -118,7 +118,7 @@ public class Obj implements Rec{
         if(s==null) throw new IllegalArgumentException("invalid key provided");
         if(isArray()) throw new IllegalStateException("array not mappable with:"+s.getName());
         int index=s.getPosition(); // try slot position
-        if(index<0) index=meta.findSlot(s.getName());// fall back to search if slot not set
+        if(index<0) index=meta.indexOf(s.getName());// fall back to search if slot not set
         if(index<0){
             values.add(val);
             meta.addSlot(s);
@@ -138,14 +138,14 @@ public class Obj implements Rec{
         if(s==null) throw new IllegalArgumentException("invalid key provided");
         //if(keys==null) throw new IllegalStateException("array not mappable with:"+s.getName());
         int index=s.getPosition(); // try slot position
-        if(index<0 && !isArray()) index=meta.findSlot(s.getName());// fall back to search if slot not set
+        if(index<0 && !isArray()) index=meta.indexOf(s.getName());// fall back to search if slot not set
         return index<0?def:values.get(index);
     }
 
     @Override
     public Rec remove(Slot s) {
         int index=s.getPosition(); // try slot position
-        if(index<0 && !isArray()) index=meta.findSlot(s.getName());// fall back to search if slot not set
+        if(index<0 && !isArray()) index=meta.indexOf(s.getName());// fall back to search if slot not set
         if(index>=0) remove(index);
         return this;
     }
