@@ -1,3 +1,10 @@
+/* 
+Copyright (c) 2011-2022 Reliancy LLC
+
+Licensed under the GNU LESSER GENERAL PUBLIC LICENSE Version 3.
+You may obtain a copy of the License at https://www.gnu.org/licenses/lgpl-3.0.en.html.
+You may not use this file except in compliance with the License. 
+*/
 package com.reliancy.jabba;
 
 import java.util.HashMap;
@@ -51,7 +58,8 @@ public class Request {
         return http_request.getHeader(key);
     }
     public String getCookie(String name,String def){
-        for(Cookie c:http_request.getCookies()){
+        Cookie[] all=http_request.getCookies();
+        if(all!=null) for(Cookie c:all){
             if(name.equalsIgnoreCase(c.getName())) return c.getValue();
         }
         return def;

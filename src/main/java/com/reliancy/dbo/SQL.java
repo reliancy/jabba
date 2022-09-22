@@ -1,3 +1,10 @@
+/* 
+Copyright (c) 2011-2022 Reliancy LLC
+
+Licensed under the GNU LESSER GENERAL PUBLIC LICENSE Version 3.
+You may obtain a copy of the License at https://www.gnu.org/licenses/lgpl-3.0.en.html.
+You may not use this file except in compliance with the License. 
+*/
 package com.reliancy.dbo;
 
 import java.util.HashMap;
@@ -207,8 +214,8 @@ public final class SQL implements Appendable{
     /** fills check values from dbo record where equal and not-equal are used.
      * we place this method here to be as close as possible to the one which generates the sql code.
      * check and check_import must be in synch.
-     * @param filter
-     * @param params
+     * @param filter set of checks
+     * @param rec record to check
      */
     public final void check_import(Check filter,DBO rec) {
         if(filter.isLeaf()){

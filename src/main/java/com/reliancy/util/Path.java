@@ -1,7 +1,11 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
+/* 
+Copyright (c) 2011-2022 Reliancy LLC
+
+Licensed under the GNU LESSER GENERAL PUBLIC LICENSE Version 3.
+You may obtain a copy of the License at https://www.gnu.org/licenses/lgpl-3.0.en.html.
+You may not use this file except in compliance with the License. 
+*/
+
 package com.reliancy.util;
 import java.io.File;
 import java.net.MalformedURLException;
@@ -13,7 +17,7 @@ import java.net.URLDecoder;
  * It might but should not hold any handles. It holds the address and
  * possibly takes care of looking up addresses.
  * The richest syntax is:
- *  PROTOCOL://USER:PWD@MACHINE:PORT/DATABASE?key=val&...
+ *  <pre> {@code PROTOCOL://USER:PWD@MACHINE:PORT/DATABASE?key=val&... } </pre>
  * Properties are held in their own string and need to be decoded.
  *
  * We use forward slash for path delimitation of database portion. For the rest we preserve other slashes to allow windows domain\\user or server\\instance.
@@ -380,7 +384,7 @@ public class Path {
 	 * method will split paths used in linux and windows. 
 	 * in particular for windows it checks if a single letter precedes a colon in which case it considers it a volume
 	 * and does not split there.
-	 * @param paths paths joined with colon or semi-colon
+	 * @param _paths paths joined with colon or semi-colon
 	 * @return array of paths
 	 */
 	public static String[] splitPaths(String _paths){

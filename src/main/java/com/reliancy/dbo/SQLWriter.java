@@ -1,3 +1,10 @@
+/* 
+Copyright (c) 2011-2022 Reliancy LLC
+
+Licensed under the GNU LESSER GENERAL PUBLIC LICENSE Version 3.
+You may obtain a copy of the License at https://www.gnu.org/licenses/lgpl-3.0.en.html.
+You may not use this file except in compliance with the License. 
+*/
 package com.reliancy.dbo;
 
 import java.io.Closeable;
@@ -172,7 +179,14 @@ public class SQLWriter implements Closeable{
         if(rec.getStatus()==DBO.Status.USED){
             stmt=updateStmt;
             // update has a pk condition for sure
-            stmt.setObject(supplied.size()+1,pk.get(rec,null),terminal.getTypeId(pk.getType(),pk.getTypeParams()));
+            Object pkval=pk.get(rec,null);
+            if(Handy.isEmpty(pkval)) throw new SQLException("Used object with empty PK");
+            //System.out.println("UPDT:"+stmt+"/"+pkval);
+            stmt.setObject(
+                supplied.size()+1,
+                pkval,
+                terminal.getTypeId(pk.getType(),pk.getTypeParams())
+                );
         }
         if(stmt==null) return false;
         // copy values
@@ -199,7 +213,7 @@ public class SQLWriter implements Closeable{
                     }
                 }                
             }
-        }
+        }else
         if(rec.getStatus()==DBO.Status.USED){
             this.itemsUpdated+=ucode;
         }

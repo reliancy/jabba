@@ -1,24 +1,31 @@
+/* 
+Copyright (c) 2011-2022 Reliancy LLC
+
+Licensed under the GNU LESSER GENERAL PUBLIC LICENSE Version 3.
+You may obtain a copy of the License at https://www.gnu.org/licenses/lgpl-3.0.en.html.
+You may not use this file except in compliance with the License. 
+*/
 package com.reliancy.jabba;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
-import com.reliancy.util.Handy;
-
-public class RouterEndPoint extends EndPoint{
-    HashMap<String,EndPoint> routes=new HashMap<>();
-    HashMap<String,ArrayList<String>> routeParams=new HashMap<>();
-    ArrayList<String> patterns=new ArrayList<>(); // route patterns ordered
+public class RoutedEndPoint extends EndPoint{
+    HashMap<String,EndPoint> routes=new HashMap<>();      // route pattern to endpoint
+    ArrayList<RouteDetector> detectors=new ArrayList<>(); // route patterns ordered
     int[] indexes;              // indexes for each route within regex
     Pattern regex;
 
-    public RouterEndPoint() {
-        super(null);
+    public RoutedEndPoint() {
+        super("router");
     }
 
     @Override
@@ -32,7 +39,6 @@ public class RouterEndPoint extends EndPoint{
         if(m!=null){
             //HashMap<String,String> pms=new HashMap<>();
             String rt=evalMatcher(m,req.getPathParams());
-            //System.out.println(rt);
             //System.out.println(req.getPathParams());
             EndPoint ep=getRoute(rt);
             if(ep!=null){
@@ -54,40 +60,30 @@ public class RouterEndPoint extends EndPoint{
         return routes.get(r);
     }
     public void addRoute(String verb,String path, EndPoint mm) {
-        if(verb==null) verb="GET|POST|DELETE";
-        String pathPat=path.replaceAll("\\{(.+)\\}","(.+)");
-        String routePat=Handy.wrap(verb,"(",")")+" "+pathPat;
-        if(!routePat.endsWith("/") && !routePat.endsWith("$")) routePat+="$";
-        routes.put(routePat,mm);
-        //System.out.println("Adding route:"+routePat);
-        ArrayList<String> params=new ArrayList<String>();
-        Pattern p=Pattern.compile("\\{(.+)\\}");
-        Matcher m=p.matcher(path);
-        while(m.find()){
-            String g=m.group();
-            params.add(Handy.unwrap(g,"{","}"));
-        }
-        if(params.isEmpty()==false) routeParams.put(routePat,params);
+        RouteDetector det=new RouteDetector(verb,path);
+        detectors.add(det);
+        routes.put(det.getPattern(),mm);
     }
 
     public void compile() {
-        patterns.clear();
-        for(String r:routes.keySet()){
-            patterns.add(r);
-        }
         // sort with longest first
-        Collections.sort(patterns,Comparator.comparing((str)->{return -str.length();}));
-        String fullPat = "("+String.join(")|(",patterns)+")";
+        Collections.sort(detectors,Comparator.comparing((det)->{return -det.getPath().length();}));
+        String fullPat=detectors
+            .stream()
+            .map(RouteDetector::toString)
+            .collect(Collectors.joining(")|("));
+        fullPat = "("+fullPat+")";
+        //System.out.println("FUll:"+fullPat);
         regex=Pattern.compile(fullPat);
         // also recompute indexes
-        indexes=new int[patterns.size()];
+        indexes=new int[detectors.size()];
         int index=1;
         for (int i = 0; i < indexes.length; i++) {
             indexes[i]=index;
-            String p=patterns.get(i);
+            RouteDetector det=detectors.get(i);
             index+=2; // this includes the verb group
-            if(routeParams.containsKey(p)){ // this includes any param groups
-                index+=routeParams.get(p).size();
+            if(det.hasParams()){ // this includes any param groups
+                index+=det.getParams().size();
             }
         }
         //Arrays.stream(indexes).forEach(e->System.out.println(e+" "));
@@ -102,8 +98,8 @@ public class RouterEndPoint extends EndPoint{
     /**
      * Find the route and return also url params.
      * url params are saved in two ways by name and by pos.
-     * @param m
-     * @param routeParams
+     * @param m matcher to check
+     * @param p parameters to reference
      * @return
      */
     public String evalMatcher(Matcher m,Map<String,String> p){
@@ -120,9 +116,10 @@ public class RouterEndPoint extends EndPoint{
            if(gindex==indexes[i]) rindex=i;
         }
         if(rindex<0) return null; // we can't match route to group
-        String ret=patterns.get(rindex);
-        if(p!=null && routeParams.containsKey(ret)){
-            ArrayList<String> pms=routeParams.get(ret);
+        RouteDetector det=detectors.get(rindex);
+        //String ret=patterns.get(rindex);
+        if(p!=null && det.hasParams()){
+            ArrayList<String> pms=det.getParams();
             for(int i=0;i<pms.size();i++){
                 String val=m.group(gindex+2+i);
                 String byName=pms.get(i).toLowerCase();
@@ -130,6 +127,31 @@ public class RouterEndPoint extends EndPoint{
                 p.put("_arg"+i,val);
             }
         }
-        return ret;
+        return det.getPattern();
+    }
+    /**
+     * Will import endpoints to serve various paths.
+     * We can call this multiple times for multiple targets.
+     * @param target
+     * @return
+     */
+    public RoutedEndPoint importMethods(Object target){
+        //RoutedEndPoint ret=new RoutedEndPoint();
+        LinkedList<Method> routes=new LinkedList<>();
+        Class<?> type=target.getClass();
+        while (type != null) {
+            for(Method m : type.getDeclaredMethods()){
+                //System.out.println("Method:"+m.toString());
+                if(m.getAnnotation(Routed.class)!=null){
+                    routes.add(0,m);
+                }
+            }
+            type = type.getSuperclass();
+        }
+        for(Method m:routes){
+            MethodEndPoint mm=new MethodEndPoint(target,m);
+            addRoute(mm.getVerb(),mm.getPath(),mm);
+        }
+        return this;
     }
 }

@@ -1,3 +1,10 @@
+/* 
+Copyright (c) 2011-2022 Reliancy LLC
+
+Licensed under the GNU LESSER GENERAL PUBLIC LICENSE Version 3.
+You may obtain a copy of the License at https://www.gnu.org/licenses/lgpl-3.0.en.html.
+You may not use this file except in compliance with the License. 
+*/
 package com.reliancy.jabba;
 import com.reliancy.util.Resources;
 import java.io.File;
@@ -40,7 +47,7 @@ public class FileServer extends EndPoint implements Resources.PathRewrite{
     @Override
     public void serve(Request request, Response response) throws IOException {
         String path=request.getPath();
-        log().info("serving:"+path);
+        log().debug("to serve:"+path);
         for(String prefix:map.keySet()){
             boolean match=path.startsWith(prefix);
             if(match){
@@ -49,13 +56,14 @@ public class FileServer extends EndPoint implements Resources.PathRewrite{
                 if(!filt.get(prefix).isAcceptable(rpath)) continue; // not acceptable to filter
                 URL f=Resources.findFirst(this, rpath, sp);
                 if(f==null) continue; // skip if rpath not located
-                System.out.println("RES:"+f);
+                this.log().debug("\tfound:"+f);
                 writeResource(f,response);
                 return;
             }
         }
         response.setStatus(Response.HTTP_NOT_FOUND);
         response.getEncoder().writeln("missing file:{0}",path);
+        this.log().error("not found:"+path);
     }
     /**
      * we prefix our path for disk and class contexts.
@@ -111,7 +119,7 @@ public class FileServer extends EndPoint implements Resources.PathRewrite{
     public Iterator<String> enumRoutes(){
         return map.keySet().iterator();
     }
-    public void exportRoutes(RouterEndPoint rep) {
+    public void exportRoutes(RoutedEndPoint rep) {
         streamRoutes().forEach(up->rep.addRoute("GET",up+".*",this));
     }
 }

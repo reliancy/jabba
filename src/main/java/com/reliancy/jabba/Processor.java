@@ -1,3 +1,10 @@
+/* 
+Copyright (c) 2011-2022 Reliancy LLC
+
+Licensed under the GNU LESSER GENERAL PUBLIC LICENSE Version 3.
+You may obtain a copy of the License at https://www.gnu.org/licenses/lgpl-3.0.en.html.
+You may not use this file except in compliance with the License. 
+*/
 package com.reliancy.jabba;
 import java.io.IOException;
 import org.slf4j.Logger;
@@ -7,7 +14,7 @@ public abstract class Processor {
     protected Processor next;
     protected String id;
     protected boolean active;
-    protected Config config;
+    protected transient Config config;
     protected Logger logger;
 
     public Processor(String id){
@@ -63,15 +70,17 @@ public abstract class Processor {
             ss.leave(this);
         }
     }
-    public void begin(Config conf){
+    public void begin(Config conf) throws Exception{
         this.config=conf;
-    };
-    public void end(){
+    }
+    public void end() throws Exception{
         this.config=null;
-    };
+    }
+    public void work() throws Exception{
+    }
     protected Logger log(){
         // prefer local over central one 
-        Logger ret=logger!=null?logger:(config!=null?(Logger)config.getProperty("logger",null):null);
+        Logger ret=logger!=null?logger:(config!=null?Config.LOGGER.get(config):null);
         // if none provided install a fresh one locally
         if(ret==null) ret=logger=LoggerFactory.getLogger(this.getId());
         return ret;

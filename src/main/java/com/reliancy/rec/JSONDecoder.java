@@ -1,8 +1,10 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
+/* 
+Copyright (c) 2011-2022 Reliancy LLC
+
+Licensed under the GNU LESSER GENERAL PUBLIC LICENSE Version 3.
+You may obtain a copy of the License at https://www.gnu.org/licenses/lgpl-3.0.en.html.
+You may not use this file except in compliance with the License. 
+*/
 
 package com.reliancy.rec;
 
@@ -12,7 +14,7 @@ import com.reliancy.util.Tokenizer;
 import com.reliancy.util.Handy;
 
 /** Special class which will tokenize string according to rules for JSON and feed the info to a listener.
- *
+ * TODO: reuse headers in an array if same structure
  * @author amer
  */
 public class JSONDecoder implements TextDecoder,DecoderSink {

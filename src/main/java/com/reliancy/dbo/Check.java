@@ -1,3 +1,10 @@
+/* 
+Copyright (c) 2011-2022 Reliancy LLC
+
+Licensed under the GNU LESSER GENERAL PUBLIC LICENSE Version 3.
+You may obtain a copy of the License at https://www.gnu.org/licenses/lgpl-3.0.en.html.
+You may not use this file except in compliance with the License. 
+*/
 package com.reliancy.dbo;
 
 import java.util.Iterator;
@@ -9,78 +16,93 @@ public class Check implements Iterable<Check> {
     public static abstract class Op{
         public abstract boolean met(Check c,Object val);
     }
+    /** logical AND operation. */
     public static Op AND=new Op(){
         public String toString(){return "AND";}
         public boolean met(Check c,Object val){
             return true;
         }
     };
+    /** logical OR operation. */
     public static Op OR=new Op(){
         public String toString(){return "OR";}
         public boolean met(Check c,Object val){
             return true;
         }
     };
+    /** logical NOT operation. */
     public static Op NOT=new Op(){
         public String toString(){return "NOT";}
         public boolean met(Check c,Object val){
             return true;
         }
     };
+    /** arithmetic equal test. */
     public static Op EQ=new Op(){
         public String toString(){return "=";}
         public boolean met(Check c,Object val){
             return true;
         }
     };
+    /** arithmetic negated equal test. */
     public static Op NEQ=new Op(){
         public String toString(){return "<>";}
         public boolean met(Check c,Object val){
             return true;
         }
     };
+    /** greater than check. */
     public static Op GT=new Op(){
         public String toString(){return ">";}
         public boolean met(Check c,Object val){
             return true;
         }
     };
+    /** greater than or equal check. */
     public static Op GTE=new Op(){
         public String toString(){return ">=";}
         public boolean met(Check c,Object val){
             return true;
         }
     };
+    /** less than check. */
     public static Op LT=new Op(){
         public String toString(){return "<";}
         public boolean met(Check c,Object val){
             return true;
         }
     };
+    /** less than or equal check. */
     public static Op LTE=new Op(){
         public String toString(){return "<=";}
         public boolean met(Check c,Object val){
             return true;
         }
     };
+    /** like check case insensitive. */
     public static Op LIKE=new Op(){
         public String toString(){return "LIKE";}
         public boolean met(Check c,Object val){
             return true;
         }
     };
+    /** set membership check. */
     public static Op IN=new Op(){
         public String toString(){return "IN";}
         public boolean met(Check c,Object val){
             return true;
         }
     };
+    /** negated set membership check. */
     public static Op NOT_IN=new Op(){
         public String toString(){return "NOT IN";}
         public boolean met(Check c,Object val){
             return true;
         }
     };
+    /** iterator over checks. 
+     * 
+    */
     public static class CheckIterator implements Iterator<Check>{
         final Check root;
         Check cur;

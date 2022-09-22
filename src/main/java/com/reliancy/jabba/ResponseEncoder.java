@@ -1,3 +1,10 @@
+/* 
+Copyright (c) 2011-2022 Reliancy LLC
+
+Licensed under the GNU LESSER GENERAL PUBLIC LICENSE Version 3.
+You may obtain a copy of the License at https://www.gnu.org/licenses/lgpl-3.0.en.html.
+You may not use this file except in compliance with the License. 
+*/
 package com.reliancy.jabba;
 
 import java.io.ByteArrayOutputStream;
@@ -67,7 +74,7 @@ public class ResponseEncoder {
         getOutputStream().write(buf,offset, len);
         return this;
     }
-    public ResponseEncoder writeString(String str) throws IOException{
+    public ResponseEncoder writeString(CharSequence str) throws IOException{
         getWriter().append(str);
         return this;
     }
@@ -79,11 +86,11 @@ public class ResponseEncoder {
         }
         return this;
     }
-    public ResponseEncoder writeln(String msg,Object ... args) throws IOException{
+    public ResponseEncoder writeln(CharSequence msg,Object ... args) throws IOException{
         if(args.length==0){
             getWriter().append(msg).append("\n");
         }else{
-            String str=MessageFormat.format(msg,args);
+            String str=MessageFormat.format(msg.toString(),args);
             getWriter().append(str).append("\n");
         }
         return this;

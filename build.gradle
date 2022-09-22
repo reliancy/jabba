@@ -11,8 +11,11 @@ apply plugin: 'application'
 apply plugin: 'maven-publish'
 
 group='com.reliancy'
+mainClassName = group+'.'+name+'.JettyApp'
 version = '0.1'
-mainClassName = group+'.'+name+'.Router'
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
 System.out.println("group:"+group);
 System.out.println("name:"+name);
 System.out.println("version:"+version);
@@ -22,17 +25,34 @@ repositories {
     mavenLocal()
     mavenCentral() 
 }
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            pom {
+                licenses {
+                    license {
+                        name = 'GNU Lesser General Public License, Version 3.0'
+                        url = 'https://www.gnu.org/licenses/lgpl-3.0.txt'
+                    }
+                }
+            }
+        }
+    }
+}
 
+javadoc {
+    source = sourceSets.main.allJava
+    //classpath = configurations.compile
+}
 dependencies {
     implementation "org.eclipse.jetty:jetty-server:11.0.1"
     implementation "org.slf4j:slf4j-simple:2.0.0-alpha0"
     //implementation 'com.hubspot.jinjava:jinjava:2.5.10'
-    implementation 'com.github.jknack:handlebars:4.2.1'
-    implementation 'com.h2database:h2:1.4.200'
+    implementation 'com.github.jknack:handlebars:4.3.0'
+    implementation 'com.h2database:h2:2.1.214'
     // https://mvnrepository.com/artifact/org.postgresql/postgresql
-    implementation 'org.postgresql:postgresql:42.3.1'
+    implementation 'org.postgresql:postgresql:42.5.0'
     // https://mvnrepository.com/artifact/com.zaxxer/HikariCP
     implementation 'com.zaxxer:HikariCP:5.0.0'
 
@@ -179,13 +199,6 @@ task runServer{
   main = mainClassName
   //args "arg1", "arg2"  
   */
-}
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            from components.java
-        }
-    }
 }
 eclipse{
   classpath {

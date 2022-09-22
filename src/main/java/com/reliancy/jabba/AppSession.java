@@ -1,20 +1,33 @@
+/* 
+Copyright (c) 2011-2022 Reliancy LLC
+
+Licensed under the GNU LESSER GENERAL PUBLIC LICENSE Version 3.
+You may obtain a copy of the License at https://www.gnu.org/licenses/lgpl-3.0.en.html.
+You may not use this file except in compliance with the License. 
+*/
 package com.reliancy.jabba;
 
 import java.util.HashMap;
 
-import com.reliancy.jabbasec.SecurityActor;
+import com.reliancy.jabba.sec.SecurityActor;
+import com.reliancy.jabba.ui.Feedback;
 
 public class AppSession implements Session{
+    public static interface Factory{
+        AppSession create(String id,App app);
+    } 
     final String id;
-    final HashMap<String,Object> values;
+    final App app;
+    final HashMap<String,Object> values=new HashMap<>();
     long timeCreated;
     long lastActive;
     long maxAge;
     SecurityActor user;
-    
-    public AppSession(String id){
+    Feedback feedback;
+
+    public AppSession(String id,App app){
         this.id=id;
-        values=new HashMap<>();
+        this.app=app;
         lastActive=timeCreated=System.currentTimeMillis();
         maxAge=1000*60*15;
     }
@@ -26,6 +39,9 @@ public class AppSession implements Session{
     @Override
     public Object getValue(String key) {
         return values.get(key);
+    }
+    public App getApp(){
+        return app;
     }
     public long getTimeInactive(){
         return System.currentTimeMillis()-lastActive;
@@ -63,5 +79,13 @@ public class AppSession implements Session{
     }
     public void setUser(SecurityActor user){
         this.user=user;
+    }
+    public static AppSession getInstance() {
+        CallSession ss=CallSession.getInstance();
+        return ss!=null?(AppSession)ss.getAppSession():null;
+    }
+    public Feedback getFeedback() {
+        if(feedback==null) feedback=new Feedback();
+        return feedback;
     }
 }

@@ -1,3 +1,10 @@
+/* 
+Copyright (c) 2011-2022 Reliancy LLC
+
+Licensed under the GNU LESSER GENERAL PUBLIC LICENSE Version 3.
+You may obtain a copy of the License at https://www.gnu.org/licenses/lgpl-3.0.en.html.
+You may not use this file except in compliance with the License. 
+*/
 package com.reliancy.jabba;
 
 import java.io.ByteArrayOutputStream;
@@ -24,6 +31,8 @@ public class Response {
     public static final int HTTP_NOT_FOUND=HttpServletResponse.SC_NOT_FOUND;
     public static final int HTTP_UNAUTHORIZED=HttpServletResponse.SC_UNAUTHORIZED;
     public static final int HTTP_FORBIDDEN=HttpServletResponse.SC_FORBIDDEN;
+    public static final int HTTP_TEMPORARY_REDIRECT=HttpServletResponse.SC_TEMPORARY_REDIRECT;
+    public static final int HTTP_FOUND_REDIRECT=HttpServletResponse.SC_FOUND;
     
     final protected HttpServletResponse  http_response;
     final protected Writer char_response;

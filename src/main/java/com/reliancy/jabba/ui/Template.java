@@ -1,16 +1,27 @@
-package com.reliancy.util;
+/* 
+Copyright (c) 2011-2022 Reliancy LLC
+
+Licensed under the GNU LESSER GENERAL PUBLIC LICENSE Version 3.
+You may obtain a copy of the License at https://www.gnu.org/licenses/lgpl-3.0.en.html.
+You may not use this file except in compliance with the License. 
+*/
+package com.reliancy.jabba.ui;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.Writer;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
 
 import com.github.jknack.handlebars.Handlebars;
+import com.github.jknack.handlebars.helper.StringHelpers;
 import com.github.jknack.handlebars.io.AbstractTemplateLoader;
 import com.github.jknack.handlebars.io.TemplateSource;
 import com.github.jknack.handlebars.io.URLTemplateSource;
+import com.reliancy.util.Resources;
+import com.reliancy.util.ResultCode;
 
 /*
 import com.hubspot.jinjava.Jinjava;
@@ -49,17 +60,24 @@ public class Template {
         public TemplateSource sourceAt(String location) throws IOException {
             String fullpath=this.resolve(location);
             URL loc=Resources.findFirst(null,fullpath,Template.search_path);
-            System.out.println(location+":"+loc+":"+fullpath);
+            //System.out.println(location+":"+loc+":"+fullpath);
             if (loc == null) {
                 Logger.getLogger(Template.class.getSimpleName()).warning("Missing template"+fullpath);
                 throw new FileNotFoundException(location);
             }
             return new URLTemplateSource(location,loc);            
         }
-
-        
     }
-    static Handlebars handlebars = new Handlebars(new HBLoader());
+    static Handlebars handlebars;
+    static{
+        handlebars= new Handlebars(new HBLoader());
+        StringHelpers.register(handlebars);
+        /* 
+        for(ConditionalHelpers h:ConditionalHelpers.values()){
+
+        }
+        */
+    }
     
     static Object[] search_path;
     static HashMap<String,Template> cache=new HashMap<>();
@@ -94,6 +112,7 @@ public class Template {
         if(sp!=null && sp.length>0) search_path=sp;
         return search_path;
     }
+    public static final int ERR_BADTEMPLATE=ResultCode.defineFailure(0x01,Template.class,"bad template: ${template}");
     com.github.jknack.handlebars.Template recipe;
     final URL location;
     String source;
@@ -114,13 +133,20 @@ public class Template {
         if(source==null) this.source=Resources.toString(location);
         return this;
     }
-    public CharSequence render(Map<String,?> context) throws IOException{
+    public CharSequence render(Object context) throws IOException{
         if(source==null) load();
         //String ret = jinjava.render(source, context);
         if(recipe==null){
             recipe=handlebars.compileInline(source);
         }
-        String ret=recipe.apply(context);
-        return ret;
+        return recipe.apply(context);
+    }
+    public void render(Object context,Writer _out) throws IOException{
+        if(source==null) load();
+        //String ret = jinjava.render(source, context);
+        if(recipe==null){
+            recipe=handlebars.compileInline(source);
+        }
+        recipe.apply(context,_out);
     }
 }

@@ -1,10 +1,16 @@
+/* 
+Copyright (c) 2011-2022 Reliancy LLC
+
+Licensed under the GNU LESSER GENERAL PUBLIC LICENSE Version 3.
+You may obtain a copy of the License at https://www.gnu.org/licenses/lgpl-3.0.en.html.
+You may not use this file except in compliance with the License. 
+*/
 package com.reliancy.dbo;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.Timestamp;
 import java.util.Date;
 
 import com.reliancy.rec.JSON;
@@ -93,25 +99,38 @@ public class TerminalTest {
     @Test
     public void complexCRUD() throws IOException, SQLException{
         System.out.println("ComplexCRUD");
+        // Reading
         try(Action act=t.begin().load(Product.class).execute()){
             for(DBO o:act){
                 System.out.println("DBO:"+o);
             }
         }
+        //Saving
         Product p=new Product();
         p.setStatus(DBO.Status.USED);
+        Product.id.set(p,35);
         Product.kind.set(p,Product.class.getSimpleName());
         Product.name.set(p,"myproduct");
         Product.created.set(p,new Date());
-        Product.short_info.set(p,"a sweet melody");
+        Product.short_info.set(p,"a sweet melody:"+new java.sql.Timestamp(System.currentTimeMillis()));
         Product.display_name.set(p,"first entry");
-        System.out.println("P0:"+JSON.toString(p));
+        System.out.println("Update P0:"+JSON.toString(p));
         t.save(p);
-        System.out.println("P1:"+JSON.toString(p));
-        Product pp=t.load(Product.class, 35);
+        System.out.println("Update P1:"+JSON.toString(p));
+        // Creating
+        Product pp=new Product();
+        Product.kind.set(pp,Product.class.getSimpleName());
+        Product.name.set(pp,"myproduct");
+        Product.created.set(pp,new Date());
+        Product.short_info.set(pp,"a sweet melody:");
+        Product.display_name.set(pp,"created entry:"+new java.sql.Timestamp(System.currentTimeMillis()));
+        t.save(pp);
+        System.out.println("Create PP0:"+JSON.toString(pp));
+        pp=t.load(Product.class, Product.id.get(pp,null));
         System.out.println("Returning:"+pp);
-        //t.delete(pp);
-        Entity.retract(Maps.class);
+        // Deleting
+        t.delete(pp);
+        //Entity.retract(Maps.class);
     }
     
 }

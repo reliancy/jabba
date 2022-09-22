@@ -1,7 +1,16 @@
+/* 
+Copyright (c) 2011-2022 Reliancy LLC
+
+Licensed under the GNU LESSER GENERAL PUBLIC LICENSE Version 3.
+You may obtain a copy of the License at https://www.gnu.org/licenses/lgpl-3.0.en.html.
+You may not use this file except in compliance with the License. 
+*/
 package com.reliancy.jabba;
 import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.util.ArrayList;
 
 import com.reliancy.util.Handy;
 
@@ -12,16 +21,17 @@ public class MethodEndPoint extends EndPoint{
         FULL,   // one or more arguments need to do casting
 
     }    
-    Route route;
+    Routed route;
     Object target;
     Method method;
     Parameter[] params;
     Class<?> retType;
     InvokeProfile invokeType;
-
-    public MethodEndPoint(Object target,Method m,Route r) {
+    ArrayList<MethodDecorator> decorators=new ArrayList<>();
+    
+    public MethodEndPoint(Object target,Method m) {
         super(target.getClass().getSimpleName()+"."+m.getName());
-        this.route=r;
+        this.route=m.getAnnotation(Routed.class);
         this.target=target;
         this.method=m;
         this.params=m.getParameters();
@@ -33,8 +43,27 @@ public class MethodEndPoint extends EndPoint{
         if(params.length==0){
             invokeType=InvokeProfile.NOARG;
         }
+        bindDecorators();
     }
-
+    public String getVerb(){
+        return route.verb();
+    }
+    public String getPath() {
+        String ret=route.path();
+        if(!ret.startsWith("/")) ret="/"+ret;
+        ret=ret.replace("{method}",method.getName());
+        return ret;
+    }
+    public Routed getRoute(){
+        return route;
+    }
+    /** pulls in and adds decorator filters to this methodcall that are supported. */
+    protected final void bindDecorators(){
+        for(Annotation a:method.getAnnotations()){
+            MethodDecorator d=MethodDecorator.query(this,a);
+            if(d!=null) decorators.add(d);
+        }
+    }
     @Override
     public void serve(Request request, Response response) throws IOException{
         log().info("Serving method....{}",invokeType);
@@ -50,8 +79,7 @@ public class MethodEndPoint extends EndPoint{
                     encodeResponse(ret,response);
                     break;
                 }
-                default:{
-                    // here we do full unmarshalling, marshalling
+                default:{   // here we do full unmarshalling, marshalling
                     Object[] argVals=decodeRequest(request);
                     ret=method.invoke(target,argVals);
                     encodeResponse(ret,response);
@@ -61,12 +89,6 @@ public class MethodEndPoint extends EndPoint{
             if(ex2 instanceof IOException) throw ((IOException)ex2);
             else throw new IOException(ex2);
         }
-    }
-    public String getPath() {
-        String ret=route.path();
-        if(!ret.startsWith("/")) ret="/"+ret;
-        ret=ret.replace("{method}",method.getName());
-        return ret;
     }
     protected Object[] decodeRequest(Request request){
         Object[] argVals=new Object[params.length];

@@ -1,3 +1,10 @@
+/* 
+Copyright (c) 2011-2022 Reliancy LLC
+
+Licensed under the GNU LESSER GENERAL PUBLIC LICENSE Version 3.
+You may obtain a copy of the License at https://www.gnu.org/licenses/lgpl-3.0.en.html.
+You may not use this file except in compliance with the License. 
+*/
 package com.reliancy.jabba;
 
 import static org.junit.Assert.assertTrue;
@@ -31,8 +38,9 @@ public class RouterTest
     {
         //assertTrue( true );
         System.out.println("Test router init...");
-        Router r=new Router();
-        RouterEndPoint rep=r.importEndPoints(r);
+        JettyApp r=new JettyApp();
+        RoutedEndPoint rep=new RoutedEndPoint();
+        rep.importMethods(r);
         rep.compile();
         //Matcher m=rep.match("GET","/helloPlain");
         Matcher m=rep.match("GET","/hello3/45");

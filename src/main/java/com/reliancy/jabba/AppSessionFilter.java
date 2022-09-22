@@ -1,3 +1,10 @@
+/* 
+Copyright (c) 2011-2022 Reliancy LLC
+
+Licensed under the GNU LESSER GENERAL PUBLIC LICENSE Version 3.
+You may obtain a copy of the License at https://www.gnu.org/licenses/lgpl-3.0.en.html.
+You may not use this file except in compliance with the License. 
+*/
 package com.reliancy.jabba;
 
 import java.io.IOException;
@@ -9,8 +16,16 @@ import java.util.UUID;
  */
 public class AppSessionFilter extends Processor{
     public static final String KEY_NAME="jbssid";
-    public AppSessionFilter() {
-        super(AppSessionFilter.class.getSimpleName().toLowerCase());
+    AppSession.Factory factory;
+    App app;
+    public AppSessionFilter(App a) {
+        this(a,null);
+    }
+    public AppSessionFilter(App a,AppSession.Factory f) {
+        super(AppSessionFilter.class.getSimpleName());
+        app=a;
+        if(f==null) f=(id,app)->new AppSession(id, app);
+        factory=f;
     }
     @Override
     public void before(Request request, Response response) throws IOException {
@@ -23,7 +38,7 @@ public class AppSessionFilter extends Processor{
         if(ss!=null){
             if(ss.isExpired()){
                 // this app sessin expired - create a new one
-                ss=new AppSession(ssid);
+                ss=factory.create(ssid,app);
                 AppSession.setInstance(ssid, ss);
             }else{
                 // this session is good
@@ -31,7 +46,7 @@ public class AppSessionFilter extends Processor{
             }
         }else{
             // no session available
-            ss=new AppSession(ssid);
+            ss=factory.create(ssid,app);
             AppSession.setInstance(ssid, ss);
         }
         CallSession css=CallSession.getInstance();

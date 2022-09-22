@@ -1,3 +1,10 @@
+/* 
+Copyright (c) 2011-2022 Reliancy LLC
+
+Licensed under the GNU LESSER GENERAL PUBLIC LICENSE Version 3.
+You may obtain a copy of the License at https://www.gnu.org/licenses/lgpl-3.0.en.html.
+You may not use this file except in compliance with the License. 
+*/
 package com.reliancy.dbo;
 
 import java.util.HashMap;
@@ -53,15 +60,16 @@ public class Entity extends Hdr{
      * @param cls
      * @return
      */
+    @SuppressWarnings("unchecked")
     public static final Entity publish(Class<? extends DBO> cls){
         Entity ret=registry.get(cls.getSimpleName());
         if(ret!=null) return ret;
         //System.out.println("Analyzing:"+cls);
-        Class base=cls.getSuperclass();
+        Class<?> base=cls.getSuperclass();
         Entity base_ent=null;
         int position0=0;
         if(base!=null && base!=DBO.class){
-            base_ent=publish(base);
+            base_ent=publish((Class<? extends DBO>)base);
             position0=base_ent.count();
         }
         java.lang.reflect.Field[] declaredFields = cls.getDeclaredFields();

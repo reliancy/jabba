@@ -1,3 +1,10 @@
+/* 
+Copyright (c) 2011-2022 Reliancy LLC
+
+Licensed under the GNU LESSER GENERAL PUBLIC LICENSE Version 3.
+You may obtain a copy of the License at https://www.gnu.org/licenses/lgpl-3.0.en.html.
+You may not use this file except in compliance with the License. 
+*/
 package com.reliancy.dbo;
 
 import java.io.IOException;
@@ -11,7 +18,7 @@ import com.reliancy.dbo.Action.Load;
 
 
 /** SQLIterator will delay closing a connection and will iterate over result set.
- * 
+ * TODO: no support for orderby yet
  */
 public class SQLReader implements SiphonIterator<DBO>{
     protected final Entity entity;

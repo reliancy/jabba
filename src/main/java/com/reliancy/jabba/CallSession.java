@@ -1,3 +1,10 @@
+/* 
+Copyright (c) 2011-2022 Reliancy LLC
+
+Licensed under the GNU LESSER GENERAL PUBLIC LICENSE Version 3.
+You may obtain a copy of the License at https://www.gnu.org/licenses/lgpl-3.0.en.html.
+You may not use this file except in compliance with the License. 
+*/
 package com.reliancy.jabba;
 
 import java.util.ArrayList;
@@ -71,11 +78,11 @@ public class CallSession implements Session{
         int len=callers.size();
         return len>0?callers.get(len-1):null;
     }
+    public static ThreadLocal<CallSession> instance=new ThreadLocal<>();
     /**
      * Will return current session given the call stack.
-     * @return
+     * @return thread local call session
      */
-    public static ThreadLocal<CallSession> instance=new ThreadLocal<>();
     public static CallSession getInstance(){
         CallSession ret=instance.get();
         if(ret==null) instance.set(ret=new CallSession());

@@ -1,7 +1,11 @@
+/* 
+Copyright (c) 2011-2022 Reliancy LLC
+
+Licensed under the GNU LESSER GENERAL PUBLIC LICENSE Version 3.
+You may obtain a copy of the License at https://www.gnu.org/licenses/lgpl-3.0.en.html.
+You may not use this file except in compliance with the License. 
+*/
 package com.reliancy.util;
-/**
- * Common utility methods.
- */
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -19,18 +23,56 @@ import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 
+/**
+ * Common utility methods.
+ */
 public final class Handy {
-    public static String wrap(String verb, String left, String right) {
+	public static final String WHITE=" \t\r\f\n";
+    /** place left-right around verb.*/ 
+	public static String wrap(String verb, String left, String right) {
         if(verb==null) verb="";
         if(verb.startsWith(left) && verb.endsWith(right)) return verb;
         return left+verb.trim()+right;
     }
+    /** remove left-right around verb.*/ 
     public static String unwrap(String verb, String left, String right) {
         if(verb==null) return verb;
         String ret=verb.trim();
         if(verb.startsWith(left) && verb.endsWith(right)) ret=verb.substring(1,verb.length()-1);
         return ret;
     }
+	/** remove any chars elements from left of verb. */
+	public static String trimLeft(String verb,String chars){
+		while(verb.length()>0 && chars.indexOf(verb.charAt(0))!=-1){
+			verb=verb.substring(1);
+		}
+		return verb;
+	}
+	/** remove any chars elements from right of verb. */
+	public static String trimRight(String verb,String chars){
+		while(verb.length()>0 && chars.indexOf(verb.charAt(verb.length()-1))!=-1){
+			verb=verb.substring(0,verb.length()-1);
+		}
+		return verb;
+	}
+	/** remove any chars elements from right and right of verb. */
+	public static String trimBoth(String verb,String chars){
+		verb=trimLeft(verb, chars);
+		verb=trimRight(verb, chars);
+		return verb;
+	}
+	/** remove any chars elements from right and right of verb symetrically. trims whitespace first. */
+	public static String trimEvenly(String verb,String chars){
+		verb=trimBoth(verb," \t\n\r\f");
+		while(verb.length()>1){
+			char left=verb.charAt(0);
+			char right=verb.charAt(verb.length()-1);
+			if(left!=right) break; // left-right not even
+			if(chars.indexOf(left)<0) break; // even but not in chars list
+			verb=verb.substring(1,verb.length()-1);
+		}		
+		return verb;
+	}
     public static <T> T nz(T val, T def){
         return val!=null?val:def;
     }
@@ -219,7 +261,7 @@ public final class Handy {
 		return bufs.toString();
     }
     /** Attempts to take a user string and compact it to camel case.
-	 * @param str nicely formatted string
+	 * @param value more or less presentable string
 	 * @return nicely compact string
 	 */
 	public static String toCamelCase(String value) {
