@@ -6,29 +6,37 @@ For example - /Users/alex/.m2/repository/<library_path>/<version>/<name>.<extens
  */
 
 apply plugin: 'java'
-apply plugin: 'eclipse'
-apply plugin: 'application'
 apply plugin: 'maven-publish'
+apply plugin: 'application'
+apply plugin: 'eclipse'
+apply from: 'extra.gradle'
 
 group='com.reliancy'
 mainClassName = group+'.'+name+'.JettyApp'
-version = '0.1'
+version = '0.2-SNAPSHOT'
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
+project.buildDir = 'target'
 
-System.out.println("group:"+group);
-System.out.println("name:"+name);
-System.out.println("version:"+version);
-System.out.println("entry:"+mainClassName);
+// print some info for orientation
+println("group:"+group);
+println("name:"+name);
+println("version:"+version);
+println("entry:"+mainClassName);
 
 repositories { 
-    mavenLocal()
-    mavenCentral() 
+    //mavenLocal()
+    //mavenCentral()
+    maven{
+      url "https://repo.reliancy.com/repository/maven-public"
+    }
 }
 publishing {
     publications {
         mavenJava(MavenPublication) {
             from components.java
+            artifact packageJavadoc
+            artifact packageSources
             pom {
                 licenses {
                     license {
@@ -39,11 +47,31 @@ publishing {
             }
         }
     }
+    repositories {
+      maven {
+        if (project.version.toUpperCase().endsWith("-SNAPSHOT")) {
+          url project.repo_url+"-snapshots"
+        } else {
+          url project.repo_url+"-releases"
+        }
+        credentials{
+          username project.repo_user
+          password project.repo_pwd
+        }
+        
+      }  
+    }
 }
-
 javadoc {
     source = sourceSets.main.allJava
     //classpath = configurations.compile
+    classpath = configurations.compileClasspath
+    options
+    {
+      setMemberLevel JavadocMemberLevel.PUBLIC
+      setAuthor true
+      links "https://docs.oracle.com/javase/8/docs/api/"
+    }
 }
 dependencies {
     implementation "org.eclipse.jetty:jetty-server:11.0.1"
@@ -91,122 +119,13 @@ task copyToLib(type: Copy) {
     into layout.buildDirectory.dir("libs") from configurations.runtimeClasspath
 }
 build.finalizedBy(copyToLib)
-task fat_jar(type: Jar) {
-    archiveBaseName = 'fat-'+project.name
-    archiveVersion =  project.version
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    /*
-    manifest {
-        attributes "Main-Class": mainClassName
-        attributes "Class-Path": configurations.runtimeClasspath.collect { it.getName() }.join(' ')
-    }
-    */
-    from { 
-        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } 
-    }{
-        exclude "META-INF/NOTICE.txt"    
-        exclude "META-INF/LICENSE"    
-    }
-    with jar
-}
-/**
-We define a singleton pattern using background thread to launch a blocking process.
-Later we make sure to terminate previous running driver threads before starting new.
-Also we split start, stop because we might not run in continouse mode.
- */
-class Server implements Runnable{
-  static Server singleton=null;
-  public static Server getSingleton(){
-    if(singleton==null){
-      System.out.println("creating new server");
-      singleton=new Server();
-    }
-    return singleton;
-  }
-  //org.slf4j.Logger log=org.slf4j.LoggerFactory.getLogger("server.driver");
-  Thread driver=null;
-  Runnable task=null;
-  protected Server(){}
-  public void info(String msg){
-    System.out.println(msg);
-  }
-  public Server useDriver(boolean f){
-    info("using driver:"+f);
-    if(f){
-      driver=new Thread(this);
-      driver.setName("server.driver");
-    }else{
-      driver=null;
-    }
-    return this;
-  }
-  public void run(){
-    info("running task");
-    try{
-      task.run();
-    }catch(java.lang.Exception ex){
-      info("running task:interrupted");
-    }
-  }
-  public Server start(Runnable c){
-    info("starting server");
-    this.task=c;
-    if(driver!=null) 
-      driver.start(); 
-    else     
-      this.run();
-    return this;
-  }
-  public Server stop(){
-    info("stopping server");
-    if(driver!=null){
-      driver.interrupt();
-      driver.join();
-    }
-    for(Thread th:Thread.getAllStackTraces().keySet()){
-      if(th.getName().equalsIgnoreCase("executor")){
-        info("cleaning up stale driver:"+th.toString())
-        th.stop();
-      }
-      if(th.getName().equalsIgnoreCase("server.driver")){
-        info("cleaning up stale driver:"+th.toString())
-        th.stop();
-      }
-    }
-    return this;
-  }
-}
-task runServer{
-  inputs.files 'src'
-  doFirst {
-    //println 'This is executed first during the execution phase.'
-    Server.getSingleton().stop();
-    Server.getSingleton().useDriver(project.gradle.startParameter.continuous);
-  }
-  doLast {
-    //println 'This is executed last during the execution phase.'
-    Server.getSingleton().start({
-        project.javaexec {
-          classpath = project.sourceSets.main.runtimeClasspath
-          main = mainClassName
-        } 
-    });
-  }
-  /* 
-  group = 'Run' // <-- change the name as per your need
-  description = 'execute run but continously'
-  classpath sourceSets.main.runtimeClasspath // <-- Don't change this
-  main = mainClassName
-  //args "arg1", "arg2"  
-  */
-}
 eclipse{
   classpath {
-    defaultOutputDir = file("build") ///default
+    defaultOutputDir = file("target/bin") ///default
     file.whenMerged { cp ->
       cp.entries.forEach { cpe ->
         if (cpe.kind == 'src' && cpe.hasProperty('output')) {
-          cpe.output = cpe.output.replace('bin/', "build/classes/java/")
+          cpe.output = cpe.output.replace('bin/', "target/classes/java/")
         }
       }
     }

@@ -7,6 +7,7 @@ You may not use this file except in compliance with the License.
 */
 package com.reliancy.jabba;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.EventListener;
 import java.util.HashMap;
@@ -212,14 +213,20 @@ public class JettyApp extends App implements Handler{
     }
     public static void main( String[] args ) throws Exception{
         //System.out.println("Hello World!");
-        Template.search_path("./var",App.class);
+        //String rt=new File(".").getAbsolutePath();
+        //System.out.println("ROOT:"+rt);
+        String work_dir="./var";
+        if(new File(work_dir).exists()==false){
+            work_dir="../var";
+        }
+        Template.search_path(work_dir,App.class);
         JettyApp app=new JettyApp();
         app.addAppSession();
         SecurityPolicy secpol=new SecurityPolicy().setStore(new PlainSecurityStore());
         app.setSecurityPolicy(secpol);
         RoutedEndPoint rep=new RoutedEndPoint().importMethods(app);
         app.setRouter(rep);
-        FileServer fs=new FileServer("/static","./var/public");
+        FileServer fs=new FileServer("/static",work_dir+"/public");
         fs.exportRoutes(app.getRouter());
         Menu top_menu=Menu.request(Menu.TOP);
         top_menu.add(new MenuItem("home")).addSpacer().add(new MenuItem("login"));
@@ -238,7 +245,6 @@ public class JettyApp extends App implements Handler{
                 System.out.println("Template:"+t);
                 ret = t.render(context).toString();
         } catch (IOException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
         return ret;
@@ -320,7 +326,6 @@ public class JettyApp extends App implements Handler{
                 //.with("feedback",events)
                 .end(resp.getEncoder().getWriter());
         } catch (IOException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
             throw new RuntimeException(e);
         }

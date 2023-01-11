@@ -84,13 +84,11 @@ public class PlainSecurable implements Securable{
 
     @Override
     public List<SecurityPermit> getDirectPermits() {
-        // TODO Auto-generated method stub
         return null;
     }
 
     @Override
     public SecurityPermit getPermit(Securable sec) {
-        // TODO Auto-generated method stub
         return null;
     }
 
