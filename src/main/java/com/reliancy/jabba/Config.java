@@ -10,10 +10,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.TreeSet;
-
 import org.slf4j.Logger;
 
 import com.reliancy.util.Handy;
@@ -84,7 +83,7 @@ public interface Config extends Iterable<Config.Property<?>>{
                 // reset modified state
                 modified=null;
             }else{
-                if(modified==null) modified=new TreeSet<Object>();
+                if(modified==null) modified=new HashSet<Object>();
                 if(modified instanceof Collection){
                     ((Collection)modified).add(p);
                 }else{
