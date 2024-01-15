@@ -160,7 +160,8 @@ public class SQLTerminal implements Terminal{
 	/**
 	 * Returns back java class for given id and or name.
 	 * The name is not used in default implementation.
-	 * @param typeid
+	 * @param typeid sql type to map
+     * @return Class matching sql typeid.
 	 */
     public Class<?> getJavaType(int typeid) {
         Class<?> ret=getSQL2Java().get(typeid);

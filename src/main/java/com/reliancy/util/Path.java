@@ -8,7 +8,6 @@ You may not use this file except in compliance with the License.
 
 package com.reliancy.util;
 import java.io.File;
-import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;

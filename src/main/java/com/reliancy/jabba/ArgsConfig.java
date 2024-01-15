@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -20,7 +19,6 @@ import com.reliancy.util.Log;
  */
 public class ArgsConfig extends Config.Base{
     final String[] args;
-    final ArrayList<Property<?>> schema=new ArrayList<>(); 
     String id;
     public ArgsConfig(String... args){
         this.args=args;
@@ -166,26 +164,5 @@ public class ArgsConfig extends Config.Base{
         }
     }
 
-    @Override
-    public <T> Config setProperty(Property<T> key, T val) {
-        props.put(key,val);
-        return this;
-    }
-    @Override
-    public <T> T delProperty(Property<T> key) {
-        Object val=props.remove(key);
-        return key.getTyp().cast(val);
-    }
-    @Override
-    public Iterator<Property<?>> iterator() {
-        ArrayList<Property<?>> keys=new ArrayList<>(props.keySet());
-        return keys.iterator();
-    }
-    @Override
-    public Config setSchema(Property<?> ...p){
-        this.schema.clear();
-        for(Property<?> pp:p) schema.add(pp);
-        return this;
-    }
    
 }

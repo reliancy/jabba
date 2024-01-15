@@ -132,8 +132,8 @@ public class SQLCleaner implements Closeable{
     }
     /**
      * This calls one delete. It can and is called from outside in case of nesting when link is external.
-     * @param rec
-     * @throws SQLException
+     * @param rec database object to delete
+     * @throws SQLException sql related error
      */
     public boolean deleteRecord(DBO rec) throws SQLException{
         if(rec==null) return false;

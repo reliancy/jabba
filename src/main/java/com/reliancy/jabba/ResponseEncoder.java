@@ -21,7 +21,6 @@ import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.Locale;
 
 /**
  * This class will replace the Java writer.

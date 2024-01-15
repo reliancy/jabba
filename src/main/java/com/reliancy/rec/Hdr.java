@@ -125,8 +125,9 @@ public class Hdr {
     }
     /**
      * this version will get or create a slot by given name.
-     * @param name
-     * @return
+     * @param name slot name
+     * @param make wether to create if not present
+     * @return Slot or null.
      */
     public Slot getSlot(String name,boolean make){
         int index=indexOf(name);

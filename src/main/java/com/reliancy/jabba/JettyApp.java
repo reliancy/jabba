@@ -7,7 +7,6 @@ You may not use this file except in compliance with the License.
 */
 package com.reliancy.jabba;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.EventListener;
 
@@ -203,6 +202,25 @@ public class JettyApp extends App implements Handler{
         Log.cleanup();  // release logging in case we deferred
         System.gc();    // sweep memory just in caser
     }
+    /** Registers a shutdown hook to interrup jetty.
+     * ctrl-c works but does not perform our shutdown sequence.
+     * this code interrupts jetty and then waits for app to finish.
+     */
+    public void addShutdownHook(){
+        final JettyApp app=this;
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            if(app.isRunning()){
+                try {
+                    app.jetty.stop();
+                    synchronized(app){
+                        app.wait(5000);
+                    }
+                } catch (Exception e) {
+                    app.log().error("shutdown cleanup:", e);
+                }
+            }
+        }));
+    }
     /** called from begin just before jetty starts. 
      * this method is called before middleware is notified so we can add or adjust config.
      * override to hook up your application.
@@ -240,18 +258,7 @@ public class JettyApp extends App implements Handler{
     public static void main( String[] args ) throws Exception{
         Config cnf=new ArgsConfig(args).load();
         JettyApp app=new JettyApp();
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            if(app.isRunning()){
-                try {
-                    app.jetty.stop();
-                    synchronized(app){
-                        app.wait(5000);
-                    }
-                } catch (Exception e) {
-                    app.log().error("shutdown cleanup:", e);
-                }
-            }
-        }));
+        app.addShutdownHook();
         app.run(cnf);
     }
 

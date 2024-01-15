@@ -7,10 +7,11 @@ You may not use this file except in compliance with the License.
 */
 package com.reliancy.jabba;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 import java.util.TreeSet;
 
 import org.slf4j.Logger;
@@ -73,6 +74,7 @@ public interface Config extends Iterable<Config.Property<?>>{
     }
     public static abstract class Base implements Config {
         protected final HashMap<Property<?>,Object> props=new HashMap<>();
+        final ArrayList<Property<?>> schema=new ArrayList<>(); 
         protected Object modified;
         public boolean isModified(){
             return modified!=null;
@@ -109,6 +111,17 @@ public interface Config extends Iterable<Config.Property<?>>{
             Object val=props.remove(key);
             return key.getTyp().cast(val);
         }
+        @Override
+        public Iterator<Property<?>> iterator() {
+            ArrayList<Property<?>> keys=new ArrayList<>(props.keySet());
+            return keys.iterator();
+        }
+        @Override
+        public Config importSchema(boolean do_clear,Property<?> ...p){
+            if(do_clear) this.schema.clear();
+            for(Property<?> pp:p) schema.add(pp);
+            return this;
+        }
     }
 
     public static final Property<String> LOG_LEVEL=new Property<>("LOG_LEVEL",String.class);
@@ -130,6 +143,6 @@ public interface Config extends Iterable<Config.Property<?>>{
     public <T> Config setProperty(Property<T> key,T val);
     public <T> T getProperty(Property<T> key,T def);
     public <T> T delProperty(Property<T> key);
-    public Config setSchema(Property<?> ...p);
+    public Config importSchema(boolean clear,Property<?> ...p);
 
 }

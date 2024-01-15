@@ -158,9 +158,7 @@ public class FileServer extends EndPoint implements AppModule,Resources.PathRewr
     }
     /** adds a route which serves files.
      * if disk_path is ommited (0 len) or null we use Resources.search_path.
-     * @param url_path 
-     * @param f
-     * @param disk_path search path for resource
+     * @param bucket resource holder to add 
      */
     public final FileServer addBucket(Bucket bucket){
         buckets.add(bucket);

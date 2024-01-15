@@ -8,10 +8,7 @@ You may not use this file except in compliance with the License.
 
 package com.reliancy.jabba;
 
-import java.io.File;
 import java.io.IOException;
-import java.util.logging.Logger;
-
 import com.reliancy.dbo.Terminal;
 import com.reliancy.jabba.sec.SecurityPolicy;
 import com.reliancy.util.CodeException;

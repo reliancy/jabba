@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -29,34 +30,57 @@ import java.util.zip.Inflater;
  */
 public final class Handy {
 	public static final String WHITE=" \t\r\f\n";
-    /** place left-right around verb.*/ 
+    
+	/** place left-right around verb.
+	 * @param verb body of text
+	 * @param left to add left of verb
+	 * @param left to add right of verb
+	 * @return adjusted text
+	 * */ 
 	public static String wrap(String verb, String left, String right) {
         if(verb==null) verb="";
         if(verb.startsWith(left) && verb.endsWith(right)) return verb;
         return left+verb.trim()+right;
     }
-    /** remove left-right around verb.*/ 
+    /** remove left-right around verb.
+	 * @param verb body of text
+	 * @param left to remove left of verb
+	 * @param left to remove right of verb
+	 * @return adjusted text
+	 **/ 
     public static String unwrap(String verb, String left, String right) {
         if(verb==null) return verb;
         String ret=verb.trim();
-        if(verb.startsWith(left) && verb.endsWith(right)) ret=verb.substring(1,verb.length()-1);
+        if(ret.startsWith(left) && ret.endsWith(right)){
+			ret=ret.substring(left.length());
+			ret=ret.substring(0,ret.length()-right.length());
+		}
         return ret;
     }
-	/** remove any chars elements from left of verb. */
+	/** remove any chars elements from left of verb. 
+	 * @param verb body of text
+	 * @return adjusted text
+	*/
 	public static String trimLeft(String verb,String chars){
 		while(verb.length()>0 && chars.indexOf(verb.charAt(0))!=-1){
 			verb=verb.substring(1);
 		}
 		return verb;
 	}
-	/** remove any chars elements from right of verb. */
+	/** remove any chars elements from right of verb. 
+	 * @param verb body of text
+	 * @return adjusted text
+	*/
 	public static String trimRight(String verb,String chars){
 		while(verb.length()>0 && chars.indexOf(verb.charAt(verb.length()-1))!=-1){
 			verb=verb.substring(0,verb.length()-1);
 		}
 		return verb;
 	}
-	/** remove any chars elements from right and right of verb. */
+	/** remove any chars elements from right and right of verb.
+	 * @param verb body of text
+	 * @return adjusted text
+	 */
 	public static String trimBoth(String verb,String chars){
 		verb=trimLeft(verb, chars);
 		verb=trimRight(verb, chars);
@@ -77,11 +101,10 @@ public final class Handy {
     public static <T> T nz(T val, T def){
         return val!=null?val:def;
     }
-    /**
-     * Will try to convert incoming value to an expected class.
-     * @param clazz
-     * @param val
-     * @return
+    /** Convert incoming value to an expected class.
+     * @param clazz expected class
+     * @param val observed value
+     * @return val converted to type clazz.
      */
     public static Object normalize(Class<?> clazz, Object val ) {
         if(val==null) return null; // we are null
@@ -145,7 +168,7 @@ public final class Handy {
         return digitCount>0;
     }
 	/**
-	 * returns true if the string is null, empty or contains only white space.
+	 * @return true if the string is null, empty or contains only white space.
 	 */
     public static boolean isBlank(CharSequence str) {
         int strLen;
@@ -330,9 +353,9 @@ public final class Handy {
 	/** Simple XOR encryption of a map of key-value pairs.
 	 *  We randomize the order of key value pairs to make the string more unpredictable.
 	 * Returned string is base64 and web safe
-	 * @param key
-	 * @param m
-	 * @return a string of encoded map key-value pairs which were then encrypted
+	 * @param key encryption key
+	 * @param m map of param-value pairs to encrypt values.
+	 * @return a string of encoded map param-value pairs which were then encrypted
 	 */
 	public static final String encrypt(String key,Map<String,String> m){
 		String ret=null;
@@ -411,9 +434,9 @@ public final class Handy {
 	}
 	/**
 	 * Generates a hash string with the algorithm name prefixed.
-	 * @param message
-	 * @param algorithm
-	 * @return
+	 * @param message text to hash
+	 * @param algorithm algorithm to use
+	 * @return hash digest
 	 */
 	public static String hashString(String message, String algorithm) throws NoSuchAlgorithmException, UnsupportedEncodingException{
 		if(message==null) return message;
@@ -421,6 +444,7 @@ public final class Handy {
         byte[] hashedBytes = digest.digest(message.getBytes("UTF-8"));
 		return algorithm.toLowerCase()+":"+encodeBase64(hashedBytes);
     }	
+	/** hash text using sha256. */
 	public static String hashSHA256(String message){
 		try{
 			return hashString(message,"SHA-256");
@@ -454,10 +478,10 @@ public final class Handy {
 	/**
 	 * Finds first occurrence of sub inside body with and without case.
 	 * We implement this search via a FSM and ignore the case.
-	 * @param body
-	 * @param sub
-	 * @param offset
-	 * @return offset of first occurance
+	 * @param body text to search
+	 * @param sub subsequence to find
+	 * @param offset offset from 0
+	 * @return offset of next occurance starting at offiset
 	 */
 	public static final int indexOf(CharSequence body,CharSequence sub,int offset){
 		if(body==null) return -1;
@@ -479,6 +503,8 @@ public final class Handy {
 	}
 	/**
 	 * Will trim the string from left and right and remove any of the symbols.
+	 * @param trim text to strip
+	 * @param sym set of characters to trim
 	 */
 	public static String trim(String trim,String sym) {
 		if(trim==null || trim.length()==0) return trim;
@@ -557,5 +583,8 @@ public final class Handy {
 	public static String[] split(String delim,String str) {
 		return split(delim,str,-1);
     }
-
+	@SafeVarargs
+	public static <T> Iterator<T> chainIterators(Iterator<T>...its){
+		return new JointIterator<T>(its);
+	}
 }

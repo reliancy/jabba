@@ -198,8 +198,8 @@ public final class SQL implements Appendable{
     /** fills params list with non-trivial parameters.
      * we place this method here to be as close as possible to the one which generates the sql code.
      * check and check_export must be in synch.
-     * @param filter
-     * @param params
+     * @param filter check operation to perform over conditions.
+     * @param params extracted params.
      */
     public final void check_export(Check filter,List<Object> params) {
         if(filter.isLeaf()){
