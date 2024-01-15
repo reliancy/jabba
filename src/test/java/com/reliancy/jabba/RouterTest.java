@@ -39,7 +39,7 @@ public class RouterTest
         //assertTrue( true );
         System.out.println("Test router init...");
         JettyApp r=new JettyApp();
-        RoutedEndPoint rep=new RoutedEndPoint();
+        Router rep=new Router();
         rep.importMethods(r);
         rep.compile();
         //Matcher m=rep.match("GET","/helloPlain");

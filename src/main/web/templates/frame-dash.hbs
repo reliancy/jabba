@@ -1,0 +1,79 @@
+{{#partial "Header"}}
+<!-- Responsive navbar-->
+<nav class="navbar navbar-expand-md navbar-light bg-light">
+    <div class="container-fluid">
+        <!-- Brand -->
+        <div class="navbar-header">
+            <a class="navbar-brand" href="#">
+            {{#with menu}}
+                {{title}}
+            {{/with}}
+            </a>
+        </div>
+        <!-- Toggler/collapsibe Button -->
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#collapsibleNavbar">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <!-- Links -->
+        <div class="collapse navbar-collapse" id="collapsibleNavbar">
+            {{#with menu}}
+            <ul class="navbar-nav mr-auto">
+            {{#each before}}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{url}}">{{title}}</a>
+                </li>
+            {{/each}}
+            </ul>
+            <ul class="navbar-nav ml-auto">
+            {{#each after}}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{url}}">{{title}}</a>
+                </li>
+            {{/each}}
+            </ul>
+            {{/with}}
+
+                <!-- Dropdown -->
+                <!--
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbardrop" data-toggle="dropdown">
+                    Dropdown link
+                    </a>
+                    <div class="dropdown-menu">
+                    <a class="dropdown-item" href="#">Link 1</a>
+                    <a class="dropdown-item" href="#">Link 2</a>
+                    <a class="dropdown-item" href="#">Link 3</a>
+                    </div>
+                </li>
+                -->
+        </div>
+    </div>
+</nav>
+<!--this is the feedback messages-->
+<div id="MessageSection" class="row">
+    {{#each feedback}}
+    <div class="col-md-12 alert-{{type}}">{{message}}</div>
+    {{/each}}
+    <!--
+    <div class="col-sm-12 alert alert-danger">This is a message</div>
+    -->
+</div>
+{{/partial}}
+{{#partial "Detail"}}
+
+<div class="container">
+  <div class="row justify-content-md-center">
+    <div class="col-2" id="LeftSection">
+        {{#block "LeftSection"}}
+            Left Section
+        {{/block}}
+    </div>
+    <div class="col-10" id="MainSection">
+        {{#block "MainSection"}}
+        Main Section
+        {{/block}}
+    </div>
+</div>
+
+{{/partial}}
+{{> base}}

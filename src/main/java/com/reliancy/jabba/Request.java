@@ -32,7 +32,7 @@ public class Request {
         return http_request.getMethod();
     }
     /**
-     * Look for this parameter in pathParan, queryParams and forms.
+     * Look for this parameter in pathParam, queryParams and forms.
      * @param pname
      * @return
      */

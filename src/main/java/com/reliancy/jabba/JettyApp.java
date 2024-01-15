@@ -10,20 +10,15 @@ package com.reliancy.jabba;
 import java.io.File;
 import java.io.IOException;
 import java.util.EventListener;
-import java.util.HashMap;
-import java.util.Map;
 
-import com.reliancy.jabba.sec.NotAuthentic;
-import com.reliancy.jabba.sec.Secured;
-import com.reliancy.jabba.sec.SecurityActor;
 import com.reliancy.jabba.sec.SecurityPolicy;
 import com.reliancy.jabba.sec.plain.PlainSecurityStore;
-import com.reliancy.jabba.ui.Feedback;
-import com.reliancy.jabba.ui.FeedbackLine;
 import com.reliancy.jabba.ui.Menu;
 import com.reliancy.jabba.ui.MenuItem;
 import com.reliancy.jabba.ui.Rendering;
 import com.reliancy.jabba.ui.Template;
+import com.reliancy.util.Log;
+import com.reliancy.util.Resources;
 
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Handler;
@@ -59,6 +54,14 @@ public class JettyApp extends App implements Handler{
         _state=State.STOPPED;
     }
     /** implementation of jetty handler interface */
+    public Connector[] getConnectors(){
+        if(connectors!=null) return connectors;
+        ServerConnector connector = new ServerConnector(jetty);
+        connector.setReuseAddress(false);
+        connector.setPort(8090);
+        connectors=new Connector[] {connector};
+        return connectors;
+    }
     @Override
     public Server getServer() {
         return jetty;
@@ -66,10 +69,12 @@ public class JettyApp extends App implements Handler{
 
     @Override
     public void setServer(Server arg0) {
+        System.out.println("setServer..."+jetty+"/"+arg0);
         jetty=arg0;
     }
     @Override
     public boolean addEventListener(EventListener arg0) {
+        System.out.println("adding evt listener...");
         return false;
     }
     @Override
@@ -111,11 +116,28 @@ public class JettyApp extends App implements Handler{
     @Override
     public void start() throws Exception {
         _state=State.STARTED;
+        jetty.setConnectors(getConnectors());
     }
 
     @Override
     public void stop() throws Exception {
         _state=State.STOPPED;
+        Connector[] connectors=jetty.getConnectors();
+        if(connectors==null || connectors.length==0) return;
+        for(Connector c:connectors){
+            ServerConnector cc=(ServerConnector) c;
+            //System.out.println("stopping connecor:"+cc);
+            try{
+                cc.stop();
+                cc.getConnectedEndPoints().forEach((endpoint)-> {
+                    //System.out.println("closing endpoint:"+endpoint);
+                    endpoint.close();
+                });
+            }finally{
+                cc.close();
+                //System.out.println("closing connecor:"+cc.getState());
+            }
+        }
     }
 
     @Override
@@ -132,7 +154,6 @@ public class JettyApp extends App implements Handler{
                        HttpServletResponse response)
         throws IOException
     {
-        baseRequest.setHandled(true);
         com.reliancy.jabba.Request req=new com.reliancy.jabba.Request(request);
         Response resp=new Response(response);
 
@@ -143,40 +164,32 @@ public class JettyApp extends App implements Handler{
         }catch(IOException ioex){ 
             Template t=Template.find("/templates/error.hbs");
             if(t==null) throw ioex;
-            Rendering.begin(t)
-                .with(ioex)
-                .end(resp.getEncoder().getWriter());
+            Rendering.begin(t).with(ioex).end(resp);
             log().error("error:",ioex);
         }catch(RuntimeException rex){
             Template t=Template.find("/templates/error.hbs");
             if(t==null) throw rex;
-            Rendering.begin(t)
-                .with(rex)
-                .end(resp.getEncoder().getWriter());
+            Rendering.begin(t).with(rex).end(resp);
             log().error("error:",rex);
         }finally{
+            baseRequest.setHandled(true);
             ss.end();
         }
     }
     /** our own interface specific to jetty engine*/
-
-    public Connector[] getConnectors(){
-        if(connectors!=null) return connectors;
-        ServerConnector connector = new ServerConnector(jetty);
-        connector.setReuseAddress(false);
-        connector.setPort(8090);
-        connectors=new Connector[] {connector};
-        return connectors;
-    }
     public void begin(Config conf) throws Exception{
+        // step 2: configure application, might add processors, adjust config
+        configure(conf);
+        // step 1: install config then begin by signaling all middleware
         super.begin(conf);
-        jetty.setConnectors(getConnectors());
+        // step 2: start jetty
         try{
+            log().info("starting...");
             jetty.start();
         }catch(Exception ex){
             setState(State.FAILED);
             if(ex.getCause() instanceof java.net.BindException){
-                log().error("Bind issue",ex);
+                log().error("bind issue",ex);
                 Thread.sleep(3000);
             }else throw ex;
         }
@@ -186,150 +199,61 @@ public class JettyApp extends App implements Handler{
         if(jetty!=null) jetty.join();
     }
     public void end() throws Exception{
-        //setState(State.STOPPING);
         super.end();
-        Connector[] connectors=jetty.getConnectors();
-       // System.out.println(connectors);
-        if(connectors!=null) for(Connector c:connectors){
-            ServerConnector cc=(ServerConnector) c;
-            //System.out.println("stopping connecor:"+cc);
-            try{
-                cc.stop();
-                cc.getConnectedEndPoints().forEach((endpoint)-> {
-                    //System.out.println("closing endpoint:"+endpoint);
-                    endpoint.close();
-                });
-            }finally{
-                cc.close();
-                //System.out.println("closing connecor:"+cc.getState());
-            }
-        }
-        //System.out.println("signaling...");
-        jetty.stop();
-        //setState(State.STOPPED);
-        //System.out.println("cleanup...");
-        System.gc();
-        //System.out.println("return...");
+        Log.cleanup();  // release logging in case we deferred
+        System.gc();    // sweep memory just in caser
     }
-    public static void main( String[] args ) throws Exception{
-        //System.out.println("Hello World!");
-        //String rt=new File(".").getAbsolutePath();
-        //System.out.println("ROOT:"+rt);
-        String work_dir="./var";
-        if(new File(work_dir).exists()==false){
-            work_dir="../var";
-        }
-        Template.search_path(work_dir,App.class);
-        JettyApp app=new JettyApp();
+    /** called from begin just before jetty starts. 
+     * this method is called before middleware is notified so we can add or adjust config.
+     * override to hook up your application.
+     * normally follows configuraion and does common sense steps.
+     * might install middleware (processors) which are later passed config.
+    */
+    public void configure(Config conf) throws Exception{
+        App app=this;
+        // setup global search path - include workdir first, then get class and app.class
+        Class<?> cls=getClass();
+        if(cls!=JettyApp.class) Resources.appendSearch(0,JettyApp.class);
+        Resources.appendSearch(0,cls);
+        String work_dir=ArgsConfig.APP_WORKDIR.get(conf);
+        if(work_dir!=null) Resources.appendSearch(0,work_dir);
+        //for(Object p:Resources.search_path){
+        //    System.out.println("sp:"+p);
+        //}
+        //Template.search_path(work_dir,App.class);   -- not needed anymore
+        // install app session middleware
         app.addAppSession();
+        // set security policy
         SecurityPolicy secpol=new SecurityPolicy().setStore(new PlainSecurityStore());
         app.setSecurityPolicy(secpol);
-        RoutedEndPoint rep=new RoutedEndPoint().importMethods(app);
-        app.setRouter(rep);
-        FileServer fs=new FileServer("/static",work_dir+"/public");
-        fs.exportRoutes(app.getRouter());
+        // install router
+        app.setRouter(new Router());
+        DemoEP ep=new DemoEP();
+        ep.publish(app);
+        // install file sever endpoint
+        FileServer fs=new FileServer("/static","/public");
+        fs.publish(app);
         Menu top_menu=Menu.request(Menu.TOP);
         top_menu.add(new MenuItem("home")).addSpacer().add(new MenuItem("login"));
-        top_menu.setTitle("Jabba");
-        app.run(new FileConfig());
-        //System.out.println("Goodbye World!");
+        top_menu.setTitle("Jabba3");
     }
-
-    @Routed()
-    public String hello(){
-        Map<String, Object> context = new HashMap<>();
-        context.put("name", "Jared");
-        String ret="";
-        try {
-                Template t=Template.find("/templates/login.hbs");
-                System.out.println("Template:"+t);
-                ret = t.render(context).toString();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return ret;
-        //#return "Hello World";
-    }
-    @Routed(
-        path="/helloPlain"
-    )
-    public void hello2(com.reliancy.jabba.Request req,Response resp) throws IOException{
-        resp.getEncoder().writeln("Hi There");
-    }
-    @Routed(
-        path="/hello3/{idd:int}"
-    )
-    public String hello3(int id){
-        return "Hello3:"+id;
-    }
-    @Routed(
-        path="/"
-    )
-    public String home(){
-        StringBuilder buf=new StringBuilder();
-        buf.append("<p>Sample pages:</p>");
-        buf.append("<dd><a href='/helloPlain'>plain</a></dd>");
-        buf.append("<dd><a href='/hello3/5'>parametric</a></dd>");
-        buf.append("<dd><a href='/hello'>templated</a></dd>");
-        buf.append("<dd><a href='/secured'>secured http</a></dd>");
-        buf.append("<dd><a href='/secured_form'>secured form</a></dd>");
-        return buf.toString();
-    }
-    @Routed
-    @Secured
-    public String secured(){
-        return "We are secured";
-    }
-    @Routed
-    @Secured(
-        login_form = "/login"
-    )
-    public String secured_form(){
-        return "We are secured by form";
-    }
-    @Routed
-    public void login(com.reliancy.jabba.Request req,Response resp){
-        //return "login form here";
-        if(req.getVerb().equals("POST")){
-            // here we need to process login and redirect
-            try{
-            System.out.println("Post login");
-            String userid=(String)req.getParam("userid",null);
-            String pwd=(String)req.getParam("password",null);
-            AppSession ass=AppSession.getInstance();
-            System.out.println("SS:"+ass);
-            System.out.println("P:"+userid+"/"+pwd);
-            SecurityPolicy secpol=ass.getApp().getSecurityPolicy();
-            SecurityActor user=secpol.authenticate(userid, pwd);
-            if(user==null) throw new NotAuthentic("invalid credentials");
-            resp.setStatus(Response.HTTP_FOUND_REDIRECT);
-            //String old_url=request.getPath();
-            //old_url=URLEncoder.encode(old_url,StandardCharsets.UTF_8.toString());
-            resp.setHeader("Location","/home");
-            }catch(Exception ex){
-                log().error("error:",ex);
-                Feedback.get().push(FeedbackLine.error(ex.getLocalizedMessage()));        
+    public static void main( String[] args ) throws Exception{
+        Config cnf=new ArgsConfig(args).load();
+        JettyApp app=new JettyApp();
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            if(app.isRunning()){
+                try {
+                    app.jetty.stop();
+                    synchronized(app){
+                        app.wait(5000);
+                    }
+                } catch (Exception e) {
+                    app.log().error("shutdown cleanup:", e);
+                }
             }
-        }
-        //Map<String, Object> context = new HashMap<>();
-        //context.put("app_title", "Jabba Login");
-        //context.put("name", "Jared");
-        //ArrayList<FeedbackLine> events=new ArrayList<>();
-
-        //Feedback.get().push(FeedbackLine.error("Error"));
-        //Feedback.get().push(FeedbackLine.info("Error"));
-        //Feedback.get().push(FeedbackLine.warn("Error"));
-        //context.put("feedback",events);
-        try {
-            resp.setContentType("text/html");
-            Rendering.begin("/templates/login.hbs")
-                //.with("feedback",events)
-                .end(resp.getEncoder().getWriter());
-        } catch (IOException e) {
-            e.printStackTrace();
-            throw new RuntimeException(e);
-        }
-
+        }));
+        app.run(cnf);
     }
+
 
 }

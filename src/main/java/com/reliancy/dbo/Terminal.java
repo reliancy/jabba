@@ -14,7 +14,7 @@ import java.io.IOException;
  *  control will be implemented via meta terminal which will return specialized terminals for each entity and running actions on it
  *  will modify the entity structure.
  * 
- *  the core of the temrminal will be the Action object. The others will just be wrappers for since item actions.
+ *  the core of the temrminal will be the Action object. The others will just be wrappers for item actions.
  *  the action will be a read or write query with session management. 
  */
 public interface Terminal {

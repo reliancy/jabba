@@ -60,7 +60,7 @@ public class TerminalTest {
     @BeforeClass
     public static void beforeAllTestMethods() {
         System.out.println("Invoked once before all test methods");
-        String url="jdbc:postgresql://postgres:Ramudin99@bigbang:5432/Test";
+        String url=System.getenv("DB_URL");        
         t=new SQLTerminal(url);
     }
  

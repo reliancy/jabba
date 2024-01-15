@@ -6,35 +6,130 @@ You may obtain a copy of the License at https://www.gnu.org/licenses/lgpl-3.0.en
 You may not use this file except in compliance with the License. 
 */
 package com.reliancy.jabba;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
+
 import org.slf4j.Logger;
 
-public interface Config {
+import com.reliancy.util.Handy;
+
+public interface Config extends Iterable<Config.Property<?>>{
     public static class Property<V> {
 
         final String name;
         final Class<V> typ;
+        V initial;
+        boolean required;
+        boolean writable;
         public Property(String name,Class<V> typ){
             this.name=name;
             this.typ=typ;
+            required=false;
+            writable=true;
+        }
+        @Override
+        public String toString(){
+            return String.format("%s:%s",name,typ.getSimpleName());
         }
         public String getName(){return name;}
         public Class<V> getTyp(){return typ;}
+        public Property<V> setInitial(V val){initial=val;return this;}
+        public V getInitial(){return initial;}
+        public Property<V> setRequired(boolean f){required=f;return this;}
+        public boolean isRequired(){return required;}
+        public Property<V> setWritable(boolean f){writable=f;return this;}
+        public boolean isWritable(){return writable;}
         public V get(Config store,V def){
             return store.getProperty(this,def);
         }
         public V get(Config store){
-            return get(store,null);
+            return get(store,initial);
         }
         public void set(Config store,V val){
             store.setProperty(this, val);
         }
+        /** converts value such as string to expected type if possible. */
+        public V adaptValue(Object val){
+            val=Handy.normalize(this.getTyp(),val);
+            return this.getTyp().cast(val);
+        }
+        @Override
+        public int hashCode(){
+            return name.toLowerCase().hashCode();
+        }
+        @Override
+        public boolean equals(Object other){
+            if(other==this) return true;
+            if(other instanceof Property){
+                Property<?> pother=(Property<?>) other;
+                return name.equalsIgnoreCase(pother.getName()) && typ==pother.getTyp();
+            }
+            return false;
+        }
     }
-    public static final Property<String> LOG_LEVEL=new Property<String>("LOG_LEVEL",String.class);
-    public static final Property<Logger> LOGGER=new Property<Logger>("LOGGER",Logger.class);
+    public static abstract class Base implements Config {
+        protected final HashMap<Property<?>,Object> props=new HashMap<>();
+        protected Object modified;
+        public boolean isModified(){
+            return modified!=null;
+        }
+        public Config setModified(Object p){
+            if(p==null){
+                // reset modified state
+                modified=null;
+            }else{
+                if(modified==null) modified=new TreeSet<Object>();
+                if(modified instanceof Collection){
+                    ((Collection)modified).add(p);
+                }else{
+                    // modified is set already but not appendable
+                }
+            }
+            return this;
+        }
+        @Override
+        public Config clear(){
+            props.clear();
+            modified=null;
+            return this;
+        }
+        @Override
+        public <T> Config setProperty(Property<T> key, T val) {
+            setModified(key);
+            props.put(key,val);
+            return this;
+        }
+        @Override
+        public <T> T delProperty(Property<T> key) {
+            setModified(key);
+            Object val=props.remove(key);
+            return key.getTyp().cast(val);
+        }
+    }
 
-    public void load();
-    public void save();
+    public static final Property<String> LOG_LEVEL=new Property<>("LOG_LEVEL",String.class);
+    public static final Property<Logger> LOGGER=new Property<>("LOGGER",Logger.class);
+    public static final Property<String> APP_INVOKED=new Property<>("APP_INVOKED",String.class);
+    public static final Property<String> APP_NAME=new Property<>("APP_NAME",String.class);
+    public static final Property<String> APP_TITLE=new Property<>("APP_TITLE",String.class);
+    public static final Property<String> APP_INFO=new Property<>("APP_INFO",String.class);
+    public static final Property<String> APP_WORKDIR=new Property<>("APP_WORKDIR",String.class);
+    public static final Property<String> APP_CLASS=new Property<>("APP_CLASS",String.class);
+    public static final Property<List> APP_ARGS=new Property<>("APP_ARGS",List.class);
+
+    public default Config getParent(){return null;};
+    public Config clear();
+    public Config load() throws IOException;
+    public Config save() throws IOException;
     public String getId();
+    public <T> boolean hasProperty(Property<T> key);
     public <T> Config setProperty(Property<T> key,T val);
     public <T> T getProperty(Property<T> key,T def);
+    public <T> T delProperty(Property<T> key);
+    public Config setSchema(Property<?> ...p);
+
 }

@@ -4,26 +4,50 @@ Unix - ~/.m2
 Windows - C:\Users\<username>\.m2
 For example - /Users/alex/.m2/repository/<library_path>/<version>/<name>.<extension>
  */
-
 apply plugin: 'java'
 apply plugin: 'maven-publish'
 apply plugin: 'application'
 apply plugin: 'eclipse'
 apply from: 'extra.gradle'
 
-group='com.reliancy'
-mainClassName = group+'.'+name+'.JettyApp'
-version = '0.2-SNAPSHOT'
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
 project.buildDir = 'target'
+group='com.reliancy'
+version = '0.3-SNAPSHOT'
+application{
+  mainClass=(group+'.'+name+'.JettyApp')
+}
+java{
+  sourceCompatibility = 1.8
+  targetCompatibility = 1.8
+}
 
 // print some info for orientation
-println("group:"+group);
-println("name:"+name);
-println("version:"+version);
-println("entry:"+mainClassName);
+//println("group:"+group);
+//println("name:"+name);
+//println("version:"+version);
+//println("entry:"+mainClassName);
 
+sourceSets {
+  main {
+    resources {
+        srcDirs "src/main/resources", "src/main/web"
+    }
+  }
+}
+processResources {
+  from (sourceSets.main.java.srcDirs) {
+      include '**/*.htm'
+      include '**/*.html'
+      include '**/*.properties'
+      include '**/*.ini'
+      include '**/*.json'
+      include '**/*.js'
+      include '**/*.css'
+      include '**/*.txt'
+      include '**/*.xml'
+      include '**/*.png'
+  }
+}
 repositories { 
     //mavenLocal()
     //mavenCentral()
@@ -75,7 +99,8 @@ javadoc {
 }
 dependencies {
     implementation "org.eclipse.jetty:jetty-server:11.0.1"
-    implementation "org.slf4j:slf4j-simple:2.0.0-alpha0"
+    implementation "org.slf4j:slf4j-jdk14:2.0.10"
+    //implementation "org.slf4j:slf4j-simple:2.0.10"
     //implementation 'com.hubspot.jinjava:jinjava:2.5.10'
     implementation 'com.github.jknack:handlebars:4.3.0'
     implementation 'com.h2database:h2:2.1.214'
@@ -92,9 +117,10 @@ test {
     // standard out or error is shown
     // in Gradle output.
     outputs.upToDateWhen {false}
-    showStandardStreams = true
+    //showStandardStreams = true
     exceptionFormat = 'full'
     // Or we use events method:
+    events "passed", "skipped", "failed", "standardOut", "standardError"
     // events 'standard_out', 'standard_error'
 
     // Or set property events:
@@ -110,7 +136,7 @@ jar {
     archiveBaseName = project.name
     archiveVersion =  project.version
     manifest {
-        attributes "Main-Class": mainClassName
+        attributes "Main-Class": application.mainClass
         attributes "Class-Path": configurations.runtimeClasspath.collect { it.getName() }.join(' ')
     }
 }
@@ -121,11 +147,11 @@ task copyToLib(type: Copy) {
 build.finalizedBy(copyToLib)
 eclipse{
   classpath {
-    defaultOutputDir = file("target/bin") ///default
+    defaultOutputDir = file("${relativePath(buildDir)}/bin") ///default
     file.whenMerged { cp ->
       cp.entries.forEach { cpe ->
         if (cpe.kind == 'src' && cpe.hasProperty('output')) {
-          cpe.output = cpe.output.replace('bin/', "target/classes/java/")
+          cpe.output = cpe.output.replace('bin/', "${relativePath(buildDir)}/classes/java/")
         }
       }
     }

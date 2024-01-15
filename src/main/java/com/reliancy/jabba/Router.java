@@ -18,16 +18,24 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-public class RoutedEndPoint extends EndPoint{
+/** Router is a special Processor which redirects requests to endpoints.
+ * 
+ */
+public class Router extends Processor{
     HashMap<String,EndPoint> routes=new HashMap<>();      // route pattern to endpoint
     ArrayList<RouteDetector> detectors=new ArrayList<>(); // route patterns ordered
     int[] indexes;              // indexes for each route within regex
     Pattern regex;
 
-    public RoutedEndPoint() {
+    public Router() {
         super("router");
     }
-
+    @Override
+    public void before(Request request, Response response) throws IOException {
+    }
+    @Override
+    public void after(Request request, Response response) throws IOException {
+    }
     @Override
     public void serve(Request req, Response resp) throws IOException {
         //System.out.println(req.http_request);
@@ -135,7 +143,7 @@ public class RoutedEndPoint extends EndPoint{
      * @param target
      * @return
      */
-    public RoutedEndPoint importMethods(Object target){
+    public Router importMethods(Object target){
         //RoutedEndPoint ret=new RoutedEndPoint();
         LinkedList<Method> routes=new LinkedList<>();
         Class<?> type=target.getClass();

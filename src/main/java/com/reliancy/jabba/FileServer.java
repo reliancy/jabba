@@ -10,70 +10,90 @@ import com.reliancy.util.Resources;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URL;
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.stream.Stream;
+import org.slf4j.Logger;
 
-public class FileServer extends EndPoint implements Resources.PathRewrite{
-    public static interface Filter{
-        boolean isAcceptable(String path);
+/** FileServer is an module and endpoint that exposes multiple URLs thru which files are served.
+ * First it will be just get(tting), later 
+ * TODO: putting, posting and maybe full DAV.
+ * TODO: We will need proper security.
+ * TODO: We will also add in memory serving.
+ * Please note Router is for routing. 
+ * Bucket is there to process input/output given verbs over resources under it.
+ */
+public class FileServer extends EndPoint implements AppModule,Resources.PathRewrite{
+    /** Bucket interface to abstract i/o and provide easier extensibility. 
+     * asContainer matches path and then returns local-to-packet path.
+    */
+    public static interface Bucket{
+        String getPrefix();
+        String asContained(String path);
+        boolean equals(String pref);
+        InputStream openSource(String local_path,FileServer user) throws IOException;
+        OutputStream openSink(String local_path,FileServer user) throws IOException;
     }
-    public static class ExtFilter implements Filter{
-        final String[] allowed;
-        public ExtFilter(String ...ext){allowed=ext;}
+    public static class FileBucket implements Bucket{
+        final String prefix;
+        String[] extAllowed;
+        Object[] domain;
+        public FileBucket(String prefix){
+            this.prefix=prefix;
+            extAllowed=new String[]{};
+            domain=new Object[]{};
+        }
         @Override
-        public boolean isAcceptable(String path) {
-            if(allowed.length==0) return true;
-            for(String ext:allowed) if(path.endsWith(ext)) return true;
+        public final String getPrefix(){return prefix;}
+        @Override
+        public String asContained(String path) {
+            if(!path.startsWith(prefix)) return null; // not contained
+            String local_path=path.replace(prefix,"");
+            if(extAllowed.length==0) return local_path;
+            for(String ext:extAllowed){
+                if(path.endsWith(ext)){
+                    return local_path;
+                }
+            }
+            return null;
+        }
+        @Override
+        public boolean equals(Object o){
+            if(o instanceof FileBucket) return prefix.equals(((FileBucket)o).getPrefix());
+            if(o instanceof String) return prefix.equals((String)o);
             return false;
         }
-    }
-    public static Filter NOFILTER=new ExtFilter();
-    String diskPrefix;
-    String classPrefix;
-    final HashMap<String,Object[]> map;
-    final HashMap<String,Filter> filt;
-    public FileServer(String url_path,Filter f,Object ... disk_path){
-        super("fileserver");
-        diskPrefix=classPrefix=null;
-        filt=new HashMap<>();
-        map=new HashMap<>();
-        addRoute(url_path,f, disk_path);
-    }
-    public FileServer(String url_path,Object ... disk_path){
-        this(url_path,NOFILTER,disk_path);
-    }
-    @Override
-    public void serve(Request request, Response response) throws IOException {
-        String path=request.getPath();
-        log().debug("to serve:"+path);
-        for(String prefix:map.keySet()){
-            boolean match=path.startsWith(prefix);
-            if(match){
-                Object[] sp=getSearchPath(prefix);
-                String rpath=path.replace(prefix,"");
-                if(!filt.get(prefix).isAcceptable(rpath)) continue; // not acceptable to filter
-                URL f=Resources.findFirst(this, rpath, sp);
-                if(f==null) continue; // skip if rpath not located
-                this.log().debug("\tfound:"+f);
-                writeResource(f,response);
-                return;
-            }
+        @Override
+        public boolean equals(String pref){return prefix.equals(pref);}
+        public FileBucket setDomain(Object...sp){
+            domain=sp;
+            return this;
         }
-        response.setStatus(Response.HTTP_NOT_FOUND);
-        response.getEncoder().writeln("missing file:{0}",path);
-        this.log().error("not found:"+path);
+        public Object[] getDomain(){
+            return (domain!=null && domain.length>0)?domain:Resources.search_path;
+        }
+        public InputStream openSource(String local_path,FileServer user) throws IOException{
+            Object[] sp=getDomain();
+            URL f=Resources.findFirst(user,local_path, sp);
+            if(f==null) return null; // skip if rpath not located
+            return f.openStream();
+        }
+        public OutputStream openSink(String local_path,FileServer user) throws IOException{
+            return null;
+        }
     }
-    /**
-     * we prefix our path for disk and class contexts.
-     */
-    @Override
-    public String rewritePath(String path, Object context) {
-        if(diskPrefix!=null && context instanceof String) return this.diskPrefix+path;
-        if(diskPrefix!=null && context instanceof File) return this.diskPrefix+path;
-        if(classPrefix!=null && context instanceof Class) return this.classPrefix+path;
-        return path;
+    final ArrayList<Bucket> buckets=new ArrayList<>();
+    String diskPrefix;      // will be prefixed to source if file
+    String classPrefix;     // will be prefixed to source if class
+    String urlPrefix;       // will be prefixed to source if URL
+    public FileServer(String url_path,String offset,Object ... source){
+        super(null);
+        diskPrefix=classPrefix=offset;
+        addBucket(new FileBucket(url_path).setDomain(source));
+    }
+    public FileServer(){
+        super(null);
     }
     public FileServer setDiskPrefix(String prefix){
         diskPrefix=prefix;
@@ -83,12 +103,50 @@ public class FileServer extends EndPoint implements Resources.PathRewrite{
         classPrefix=prefix;
         return this;
     }
+    public FileServer setURLOffset(String offset){
+        urlPrefix=offset;
+        return this;
+    }
     /**
-     * Will render a file to response.
+     * we prefix our path for disk and class contexts.
+     */
+    @Override
+    public String rewritePath(String path, Object context) {
+        if(diskPrefix!=null && context instanceof String) return this.diskPrefix+path;
+        if(diskPrefix!=null && context instanceof File) return this.diskPrefix+path;
+        if(classPrefix!=null && context instanceof Class) return this.classPrefix+path;
+        if(urlPrefix!=null && context instanceof URL) return this.urlPrefix+path;
+        return path;
+    }
+    @Override
+    public void serve(Request request, Response response) throws IOException {
+        String path=request.getPath();
+        Logger logger=log();
+        boolean atDebug=logger.isDebugEnabled();
+        if(atDebug) logger.debug("to serve:"+path);
+        for(Bucket bucket:buckets){
+            String local_path=bucket.asContained(path);
+            if(local_path==null) continue; // this bucket is not accepting
+            try(InputStream ins=bucket.openSource(local_path,this)){
+                if(atDebug) logger.debug("\tfound:"+local_path);
+                String ctype=HTTP.ext2mime(local_path);
+                response.setStatus(Response.HTTP_OK);
+                response.setContentType(ctype);
+                ResponseEncoder enc=response.getEncoder();
+                enc.writeStream(ins);
+                return;
+            }
+        }
+        response.setStatus(Response.HTTP_NOT_FOUND);
+        response.getEncoder().writeln("missing file:{0}",path);
+        logger.error("not found:"+path);
+    }
+    /**
+     * Will render a URL resource to response.
      * @param f
      * @param response
      */
-    protected void writeResource(URL f, Response response) throws IOException{
+    protected static void writeResource(URL f, Response response) throws IOException{
         //log().info("writing:"+f);
         ResponseEncoder enc=response.getEncoder();
         try(InputStream is=f.openStream()){
@@ -98,28 +156,29 @@ public class FileServer extends EndPoint implements Resources.PathRewrite{
             enc.writeStream(is);
         }
     }
-    public final void addRoute(String url_path,Filter f,Object... disk_path){
-        if(disk_path!=null){
-            map.put(url_path,disk_path);
-            filt.put(url_path,f!=null?f:NOFILTER);
-        }else{
-            map.remove(url_path);
-            filt.remove(url_path);
-        }
+    /** adds a route which serves files.
+     * if disk_path is ommited (0 len) or null we use Resources.search_path.
+     * @param url_path 
+     * @param f
+     * @param disk_path search path for resource
+     */
+    public final FileServer addBucket(Bucket bucket){
+        buckets.add(bucket);
+        return this;
     }
-    public Object[] getSearchPath(String url_path){
-        return map.get(url_path);
+    public FileServer delBucket(Bucket bucket){
+        buckets.remove(bucket);
+        return this;
     }
-    public Filter getFilter(String url_path){
-        return filt.get(url_path);
+    public Bucket getBucket(String url_path){
+        for(Bucket b:buckets) if(b.equals(url_path)) return b;
+        return null;
     }
-    public Stream<String> streamRoutes() {
-        return map.keySet().stream();
+    public Iterator<Bucket> enumBuckets(){
+        return buckets.iterator();
     }
-    public Iterator<String> enumRoutes(){
-        return map.keySet().iterator();
-    }
-    public void exportRoutes(RoutedEndPoint rep) {
-        streamRoutes().forEach(up->rep.addRoute("GET",up+".*",this));
+    public void publish(App app) {
+        Router rep=app.getRouter();
+        for(Bucket b:buckets) rep.addRoute("GET",b.getPrefix()+".*",this);
     }
 }

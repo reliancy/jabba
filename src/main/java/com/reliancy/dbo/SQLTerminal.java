@@ -22,6 +22,10 @@ import com.reliancy.util.Path;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
+/** SQL particular implementation of a terminal.
+ * It will use a connection pool under it to take care of connection re-use.
+ * 
+ */
 public class SQLTerminal implements Terminal{
     HikariConfig config = new HikariConfig();
     HikariDataSource ds;
@@ -48,7 +52,7 @@ public class SQLTerminal implements Terminal{
     }
     @Override
     public Action execute(Action q) throws IOException{
-        System.out.println("Executing..."+q.getTrait());
+       // System.out.println("Executing..."+q.getTrait());
         Action.Trait tr=q.getTrait();
         if(tr instanceof Action.Load){
             Entity ent=q.getEntity();
@@ -60,14 +64,14 @@ public class SQLTerminal implements Terminal{
                 reader.close();
                 throw new IOException(e);
             }
-            System.out.println("Executing...Done");
+            //System.out.println("Executing...Done");
             return q;
         }else if(tr instanceof Action.Save){
             Entity ent=q.getEntity();
             try(SQLWriter writer=new SQLWriter(ent,this)) {
                 writer.open();
                 writer.flush(q.getItems());
-                System.out.println("Executing...Done");
+                //System.out.println("Executing...Done");
                 return q;
             }catch(SQLException e){
                 throw new IOException(e);
@@ -77,7 +81,7 @@ public class SQLTerminal implements Terminal{
             try(SQLCleaner cleaner=new SQLCleaner(ent,this)) {
                 cleaner.open();
                 cleaner.flush(q.getItems());
-                System.out.println("Executing...Done");
+                //System.out.println("Executing...Done");
                 return q;
             }catch(SQLException e){
                 throw new IOException(e);

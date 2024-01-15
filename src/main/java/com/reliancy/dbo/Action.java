@@ -17,7 +17,7 @@ import java.util.Iterator;
  * At its core are action traits which are classes that define either loading,saving or deleting.
  * The items field is a consumable object when consumed the action is done.
  * So for loading we iterate once done it cannot be done again. Also when items are provided for saving
- * once iterated over and saved they we done.
+ * once iterated over and saved we are done.
  */
 public class Action implements Iterable<DBO>,SiphonIterator<DBO>{
     public static class Trait{

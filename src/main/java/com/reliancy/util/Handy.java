@@ -13,6 +13,7 @@ import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.HashMap;
@@ -84,7 +85,7 @@ public final class Handy {
      */
     public static Object normalize(Class<?> clazz, Object val ) {
         if(val==null) return null; // we are null
-        if(clazz.isAssignableFrom(val.getClass())) return clazz; // we are assignable
+        if(clazz.isAssignableFrom(val.getClass())) return val; // we are assignable
         if(val instanceof String){
             String value=(String) val;
             if(value.isEmpty() || value.equals("''") || value.equals("\"\"")) return null;
@@ -96,7 +97,6 @@ public final class Handy {
             if( Float.class==( clazz ) || float.class==( clazz ) ) return Float.parseFloat( value );
             if( Double.class==( clazz ) || double.class==( clazz )) return Double.parseDouble( value );
         }
-        
         return val;
     } 
     /**
@@ -523,4 +523,39 @@ public final class Handy {
 		}
 		return buf.toString();
 	}
+    /** splitting without using regex.
+	 * leading or trailing delims will produce empty tokens.
+	 * if you need to split on a set of single chars please use tokenizer.
+	 * @param delim delim string
+	 * @param str body of text to chop
+	 * @param delim_count maximal number of splits or -1 for all
+	 * @return array of tokens
+	*/
+	public static String[] split(String delim,String str,int delim_count) {
+		ArrayList<String> ret=new ArrayList<>();
+		int delimLen=delim!=null?delim.length():0;
+		int len=str.length();
+		int index=0;
+		int delimCnt=0; 		// track splits
+		int delimAt=0;		// last delim position
+		while(index<len){
+			if(delim_count>0 && delimCnt>=delim_count) break; // reached limit of delims
+			delimAt=delimLen>0?str.indexOf(delim, index):index+1;
+			if(delimAt<0) break; // no more delims
+			// we got a hit
+			delimCnt+=1;
+			ret.add(str.substring(index, delimAt)); // add token
+			index=delimAt+delimLen;
+		}
+		if(index<len || delimAt>0){
+			// add remainder (no more delim or delim at end)
+			ret.add(str.substring(index));
+		}
+		return ret.toArray(new String[ret.size()]);
+    }
+    /** split a string as often as possible. */
+	public static String[] split(String delim,String str) {
+		return split(delim,str,-1);
+    }
+
 }

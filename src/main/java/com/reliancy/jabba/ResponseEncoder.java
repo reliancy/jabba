@@ -8,6 +8,7 @@ You may not use this file except in compliance with the License.
 package com.reliancy.jabba;
 
 import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -15,6 +16,7 @@ import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.Collection;
@@ -25,22 +27,30 @@ import java.util.Locale;
  * This class will replace the Java writer.
  * It will have chainable calls. It will inherit lower level calls
  * and then extend with higher level. For example write, writeln but then writeJson etc.
+ * implements closeable,autocloseable,appendable.
+ * we do not close
  */
-public class ResponseEncoder {
+public class ResponseEncoder implements Appendable,Closeable{
     protected final Response response;
-    protected final Locale locale;
+    //protected final Locale locale;
     protected Writer writer;
     protected OutputStream out;
-
+    protected Charset charSet;
     public ResponseEncoder(Response r){
-        response=r;
-        locale=Locale.getDefault();
+        this(r,StandardCharsets.UTF_8);
+        //response=r;
+        //locale=Locale.getDefault();
     }
-    public ResponseEncoder(Response r,Locale loc){
+    public ResponseEncoder(Response r,Charset chset){
         response=r;
-        locale=loc;
+        //locale=loc;
+        charSet=StandardCharsets.UTF_8;
     }
-    protected OutputStream getOutputStream() throws IOException{
+    public ResponseEncoder setCharSet(Charset set){
+        charSet=set;
+        return this;
+    }
+    public OutputStream getOutputStream() throws IOException{
         if(out!=null) return out;
         if(response.getStatus()==null) response.setStatus(Response.HTTP_OK);
         if(response.getContentType()==null) response.setContentType("application/octet-stream");
@@ -51,10 +61,10 @@ public class ResponseEncoder {
         }else{
             out=new ByteArrayOutputStream();
         }
-        writer=new OutputStreamWriter(out,StandardCharsets.UTF_8);
+        writer=new OutputStreamWriter(out,charSet);
         return out;
     }
-    protected Writer getWriter() throws IOException{
+    public Writer getWriter() throws IOException{
         if(writer!=null) return writer;
         if(response.getStatus()==null) response.setStatus(Response.HTTP_OK);
         if(response.getContentType()==null) response.setContentType("text/plain;charset=utf-8");
@@ -64,7 +74,7 @@ public class ResponseEncoder {
             writer=response.char_response;
         }else if(response.byte_response!=null){
             out=response.byte_response;
-            writer=new OutputStreamWriter(out,StandardCharsets.UTF_8);
+            writer=new OutputStreamWriter(out,charSet);
         }else{
             writer=new StringWriter();
         }
@@ -130,6 +140,25 @@ public class ResponseEncoder {
             wr.append(ret.toString());
         }
         //wr.append("\n");
+        return this;
+    }
+    //////   Interface implementations
+    @Override
+    public void close() throws IOException {
+        getWriter().close();
+    }
+    @Override
+    public Appendable append(CharSequence csq) throws IOException {
+        return append(csq,0,csq.length());
+    }
+    @Override
+    public Appendable append(CharSequence csq, int start, int end) throws IOException {
+        this.getWriter().append(csq,start,end);
+        return this;
+    }
+    @Override
+    public Appendable append(char c) throws IOException {
+        this.getWriter().append(c);
         return this;
     }
 }

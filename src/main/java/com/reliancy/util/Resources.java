@@ -19,18 +19,47 @@ import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.Writer;
 import java.net.HttpURLConnection;
+import java.net.JarURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
+/** Static utility with helper methods to read or write resources.
+ * The place where we host a global search path often used by others 
+ * such as Template or FileServe (unless overriden.)
+ */
 public class Resources {
+    public static Object[] search_path;
+    /** appends one+ paths to search at position pos. 
+     * neg pos substracts from end 
+     */
+    public static Object[] appendSearch(int pos,Object ...src){
+        if(search_path==null) search_path=new Object[0];
+        if(pos<0) pos=search_path.length+pos+1;
+        if(pos<0 || pos>search_path.length) throw new IndexOutOfBoundsException("at:"+pos);
+        Object[] new_path=new Object[search_path.length+src.length];
+        // first left side of old search path
+        if(pos>0){ 
+            System.arraycopy(search_path, 0, new_path, 0, pos);
+        }
+        // next new sources
+        if(src.length>0){
+            System.arraycopy(src, 0, new_path, pos, src.length);
+        }
+        // lastly right side of old search path
+        System.arraycopy(search_path,pos, new_path,pos+src.length, search_path.length-pos);
+        search_path=new_path;
+        return search_path;
+    }
     public static interface PathRewrite{
         public String rewritePath(String path,Object context);
     }
     public static URL findFirst(PathRewrite remap,String path,Object ... sp){
+        String path0=path;
+        if(sp==null || sp.length==0) sp=search_path;
         for(Object base:sp){
-            if(remap!=null) path=remap.rewritePath(path,base);
+            if(remap!=null) path=remap.rewritePath(path0,base);
             if(base instanceof Class){
                 URL ret=((Class<?>)base).getResource(path);
                 return ret;
@@ -57,11 +86,20 @@ public class Resources {
                     URL ret=new URL((URL)base,path);
                     String proto=ret.getProtocol();
                     if(proto.equals("http") || proto.equals("https")){
-                        HttpURLConnection huc = (HttpURLConnection) ret.openConnection();
-                        huc.setRequestMethod("HEAD");
-                        int responseCode = huc.getResponseCode();
-                        huc.disconnect();
-                        if(responseCode==HttpURLConnection.HTTP_OK) return ret;
+                        HttpURLConnection huc = null;
+                        try{
+                            huc=(HttpURLConnection) ret.openConnection();
+                            huc.setRequestMethod("HEAD");
+                            int responseCode = huc.getResponseCode();
+                            if(responseCode==HttpURLConnection.HTTP_OK) return ret;
+                        }finally{
+                            if(huc!=null) huc.disconnect();
+                        }
+                    }
+                    if(proto.startsWith("jar")){
+                        JarURLConnection juc = null;
+                        juc=(JarURLConnection) ret.openConnection();
+                        if(juc.getJarEntry()!=null) return ret;
                     }
                     if(proto.equals("file")){
                         File f=new File(ret.getPath());

@@ -59,16 +59,29 @@ public class Template {
         @Override
         public TemplateSource sourceAt(String location) throws IOException {
             String fullpath=this.resolve(location);
-            URL loc=Resources.findFirst(null,fullpath,Template.search_path);
+            URL loc=Resources.findFirst(null,fullpath,Template.search_path());
             //System.out.println(location+":"+loc+":"+fullpath);
             if (loc == null) {
-                Logger.getLogger(Template.class.getSimpleName()).warning("Missing template"+fullpath);
+                Logger.getLogger(Template.class.getSimpleName()).warning("Template missing:"+fullpath);
                 throw new FileNotFoundException(location);
             }
             return new URLTemplateSource(location,loc);            
         }
+        public String resolve(String uri){
+            if(uri==null || uri.isEmpty()) return uri;
+            // we strip prefix and suffic just in case
+            if(uri.startsWith(this.getPrefix())) uri=uri.substring(this.getPrefix().length());
+            if(uri.endsWith(this.getSuffix())) uri=uri.substring(0,uri.indexOf(this.getSuffix()));
+            if(Template.partial_map.containsKey(uri)){
+                uri=Template.partial_map.get(uri);
+            }
+            return super.resolve(uri);
+        }
     }
     static Handlebars handlebars;
+    static HashMap<String,String> partial_map=new HashMap<>();
+    static Object[] search_path;
+    static HashMap<String,Template> cache=new HashMap<>();
     static{
         handlebars= new Handlebars(new HBLoader());
         StringHelpers.register(handlebars);
@@ -77,10 +90,8 @@ public class Template {
 
         }
         */
+        partial_map.put("__frame__","frame-land");
     }
-    
-    static Object[] search_path;
-    static HashMap<String,Template> cache=new HashMap<>();
     /** renders a template to string, possibly locates it first.
      * 
      * @param path
@@ -89,7 +100,7 @@ public class Template {
      * @throws IOException
      */
     public static CharSequence render(String path,Map<String,?> context) throws IOException{
-        Template t=find(path,search_path);
+        Template t=find(path);
         if(t==null){
             return null;
         }else{
@@ -102,7 +113,7 @@ public class Template {
     public static Template find(String path,Object ... sp) {
         Template ret=cache.get(path);
         if(ret!=null) return ret;
-        URL loc=Resources.findFirst(null, path, (sp!=null && sp.length>0?sp:search_path));
+        URL loc=Resources.findFirst(null, path, (sp!=null && sp.length>0?sp:search_path()));
         if(loc==null) return null;
         ret=new Template(loc);
         cache.put(path,ret);
@@ -110,7 +121,17 @@ public class Template {
     }
     public static Object[] search_path(Object...sp){
         if(sp!=null && sp.length>0) search_path=sp;
-        return search_path;
+        return search_path!=null?search_path:Resources.search_path;
+    }
+    /**
+     * will register a partial mapping to let us dynamically switch partials.
+     * this is useful in writing components for various layouts.
+     * all components derive from frame while frame is switched to frame-dash or frame-land.
+     * @param src
+     * @param dst
+     */
+    public static void remap_partial(String src,String dst){
+        Template.partial_map.put(src,dst);
     }
     public static final int ERR_BADTEMPLATE=ResultCode.defineFailure(0x01,Template.class,"bad template: ${template}");
     com.github.jknack.handlebars.Template recipe;

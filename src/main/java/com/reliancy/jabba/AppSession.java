@@ -11,6 +11,9 @@ import java.util.HashMap;
 
 import com.reliancy.jabba.sec.SecurityActor;
 import com.reliancy.jabba.ui.Feedback;
+/** AppSession is recovered early on and holds per-user app instance data.
+ * Unless it is owned by user db terminals should not be held here.
+ */
 
 public class AppSession implements Session{
     public static interface Factory{

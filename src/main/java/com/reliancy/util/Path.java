@@ -8,6 +8,7 @@ You may not use this file except in compliance with the License.
 
 package com.reliancy.util;
 import java.io.File;
+import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
@@ -42,8 +43,15 @@ public class Path {
     String database;		///< name of database or filename
     String properties;     ///< properties are what follows ? in a url
 
+    public Path(String connect,boolean do_parse) {
+        if(do_parse){
+			parse(connect);
+		}else{
+			connectstring=connect;
+		}
+    }
     public Path(String connect) {
-        setConnectString(connect);
+        this(connect,true);
     }
 
 	public Path(Path in) {
@@ -59,7 +67,7 @@ public class Path {
 
     @Override
     public String toString() {
-        return getConnectString();
+        return assemble();
     }
 	/**
 	 * Converts the path to a file.
@@ -85,7 +93,7 @@ public class Path {
 		if(Handy.isBlank(getHost()) && path.contains("://") && !path.contains(":///")) path=path.replace("://",":///");
 		return new URL(path);
 	}
-	public void clear(){
+	public Path clear(){
 		connectstring=null;
 		protocol=null;
 		userid=null;
@@ -94,9 +102,9 @@ public class Path {
 		port=null;
 		database=null;
 		properties=null;
+		return this;
 	}
-
-    public String getConnectString() {
+    public String assemble() {
         if(connectstring!=null) return connectstring;
 		// assemble the connect string
 		StringBuilder buf=new StringBuilder();
@@ -131,10 +139,10 @@ public class Path {
 		return connectstring;
     }
 
-    public void setConnectString(String connect) {
+    public Path parse(String connect) {
 		clear();
         if (connect == null) {
-            return;
+            return this;
         }
 		this.connectstring=connect;
         // first get protocol - everything up to : which is not followed by a symbol (includes :// but also c:/
@@ -204,6 +212,7 @@ public class Path {
             properties = database.substring(st);
             database = database.substring(0, st);
         }
+		return this;
     }
 
     /**
@@ -411,12 +420,22 @@ public class Path {
 		return str.split("&");
     }
     public static String[] splitKeyValue(String str) {
-		String[] t=str.split("=");
+		String[] t=Handy.split("=",str,1);
 		if(t==null || t.length==0) return null;
 		t[0]=Handy.trim(t[0],"'\"");
-		return t;
+		try {
+			t[1]=URLDecoder.decode(t[1],"UTF-8");
+			t[1]=Handy.trim(t[1],"'\"");
+			return t;
+		} catch (Exception e) {
+			if(t.length<2){
+				return new String[]{t[0],null};
+			}else{
+				return t;
+			}
+		}
     }
     public static String[] split(String str) {
-		return str.split("/");
+		return Handy.split("/",str);
     }
 }

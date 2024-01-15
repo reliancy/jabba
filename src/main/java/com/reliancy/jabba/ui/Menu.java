@@ -37,6 +37,10 @@ public class Menu extends MenuItem{
     public int getSize(){
         return items.size();
     }
+    public Menu clear(){
+        items.clear();
+        return this;
+    }
     public Menu add(MenuItem itm){
         items.add(itm);
         return this;

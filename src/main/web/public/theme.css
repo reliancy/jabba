@@ -1,0 +1,14 @@
+html, body {
+    height: 100%;
+}
+.fa-2x {
+    vertical-align: middle;
+}
+.col-fixed {
+    margin: 1em auto;
+}
+@media (min-width: 768px) {
+.col-fixed {
+    width: 600px;
+}
+}  

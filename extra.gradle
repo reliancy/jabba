@@ -12,11 +12,11 @@ task dotenv{
 }
 task packageJavadoc(type: Jar, dependsOn: 'javadoc') {
     from javadoc
-    classifier = 'javadoc'
+    archiveClassifier = 'javadoc'
 }
 task packageSources(type: Jar, dependsOn: 'classes') {
     from sourceSets.main.allSource
-    classifier = 'sources'
+    archiveClassifier = 'sources'
 }
 task fat_jar(type: Jar) {
     archiveBaseName = 'fat-'+project.name
@@ -92,7 +92,7 @@ class Server implements Runnable{
     info("stopping server");
     if(driver!=null){
       driver.interrupt();
-      driver.join();
+      //driver.join();
     }
     for(Thread th:Thread.getAllStackTraces().keySet()){
       if(th.getName().equalsIgnoreCase("executor")){
@@ -116,8 +116,8 @@ task runServer{
   doLast {
     Server.main().start({
         project.javaexec {
-          classpath = project.sourceSets.main.runtimeClasspath
-          main = mainClassName
+          classpath = sourceSets.main.runtimeClasspath
+          main = application.mainClass.get()
         } 
     });
   }

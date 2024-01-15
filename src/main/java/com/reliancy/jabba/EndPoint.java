@@ -9,6 +9,9 @@ package com.reliancy.jabba;
 
 import java.io.IOException;
 
+/** EndPoint is a special processor usually the last in chain.
+ * 
+ */
 public abstract class EndPoint extends Processor{
 
     public EndPoint(String id) {

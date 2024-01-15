@@ -10,7 +10,12 @@ import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/** Abstract base class of request/response handlers.
+ * App is a processor and under it a router and a chain of filters are also processors.
+ * Also endpoints are processors too.
+ */
 public abstract class Processor {
+    protected Processor parent;
     protected Processor next;
     protected String id;
     protected boolean active;
@@ -32,21 +37,30 @@ public abstract class Processor {
     public void setNext(Processor next) {
         this.next = next;
     }
+    public Processor getParent() {
+        return parent;
+    }
+    public void setParent(Processor p) {
+        if(parent!=null && p!=null && p!=parent){
+            throw new IllegalStateException("processor is attached to different parent");
+        }
+        this.parent = p;
+    }
     public boolean isActive() {
         return active;
     }
     public void setActive(boolean active) {
         this.active = active;
     }
-    
     public Config getConfig() {
-        return config;
+        if(config!=null) return config;
+        if(parent!=null) return parent.getConfig();
+        return null;
     }
-    /*
-    public void setConfig(Config config) {
-        this.config = config;
-    }
-    */
+    // using config as a marker of a run so set during begin
+    // public void setConfig(Config config) {
+    //     this.config = config;
+    // }
     /**
      * Main event processing chain.
      * Will go down the chain until result code is set.
@@ -70,9 +84,19 @@ public abstract class Processor {
             ss.leave(this);
         }
     }
+    /** Place to prepare for a run. */
     public void begin(Config conf) throws Exception{
         this.config=conf;
     }
+    /** Special null config begin only useful for middleware (to force them to use parent). */
+    protected void begin() throws Exception {
+        this.begin(null);
+    }
+    /**
+     * cleans up by detaching from config.
+     * Also notifies any waiting clients that it is done.
+     * @throws Exception
+     */
     public void end() throws Exception{
         this.config=null;
     }

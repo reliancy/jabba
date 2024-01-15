@@ -8,11 +8,11 @@ You may not use this file except in compliance with the License.
 package com.reliancy.jabba.ui;
 
 import java.io.IOException;
-import java.io.Writer;
 import java.util.HashMap;
 import java.util.Map;
 
 import com.github.jknack.handlebars.Context;
+import com.reliancy.jabba.Response;
 import com.reliancy.util.CodeException;
 
 /**
@@ -26,6 +26,7 @@ public class Rendering extends HashMap<String,Object>{
         ret.with("menu",Menu.request(Menu.TOP));
         ret.with("toolbar",Menu.request(Menu.LEFT));
         ret.with("feedback",Feedback.get());
+        ret.with("layout","land-app");
         return ret;
     }
     public static Rendering begin(String path,Object ...sp){
@@ -48,9 +49,9 @@ public class Rendering extends HashMap<String,Object>{
             ctx.destroy();
         }   
     }
-    public void end(Writer _out) throws IOException{
+    public void end(Response resp) throws IOException{
         try{
-            template.render(ctx,_out);
+            template.render(ctx,resp.getEncoder().getWriter());
         }finally{
             ctx.destroy();
         }   
