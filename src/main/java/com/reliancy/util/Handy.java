@@ -120,6 +120,9 @@ public final class Handy {
             if( Float.class==( clazz ) || float.class==( clazz ) ) return Float.parseFloat( value );
             if( Double.class==( clazz ) || double.class==( clazz )) return Double.parseDouble( value );
         }
+		if(clazz==String.class || clazz==CharSequence.class){
+			return String.valueOf(val);
+		}
         return val;
     } 
     /**

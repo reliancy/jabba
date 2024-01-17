@@ -115,6 +115,7 @@ task runServer{
   }
   doLast {
     Server.main().start({
+        println(application.mainClass.get())
         project.javaexec {
           classpath = sourceSets.main.runtimeClasspath
           main = application.mainClass.get()

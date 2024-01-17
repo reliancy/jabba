@@ -66,7 +66,7 @@ public class MethodEndPoint extends EndPoint{
     }
     @Override
     public void serve(Request request, Response response) throws IOException{
-        log().info("Serving method....{}",invokeType);
+        log().debug("Serving method....{}",invokeType);
         try{
             Object ret=null;
             switch(invokeType){

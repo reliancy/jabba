@@ -86,18 +86,15 @@ public class ArgsConfig extends Config.Base{
             }else if(values.size()==1){
                 // we got single value
                 String val=values.get(0);
+                Property<?> prop=null;
                 if("true".equalsIgnoreCase(val) || "false".equalsIgnoreCase(val)){
-                    Property<Boolean> prop=new Property<>(pkey,Boolean.class);
-                    Boolean val2=prop.adaptValue(val);
-                    setProperty(prop,val2);
+                    prop=new Property<>(pkey,Boolean.class);
                 }else if(Handy.isNumeric(val)){
-                    Property<Float> prop=new Property<>(pkey,Float.class);
-                    Float val2=prop.adaptValue(val);
-                    setProperty(prop,val2);
+                    prop=new Property<>(pkey,Float.class);
                 }else{
-                    Property<String> prop=new Property<>(pkey,String.class);
-                    setProperty(prop,val);
+                    prop=new Property<>(pkey,String.class);
                 }
+                prop.setString(this, val);
             }else{
                 // we got a list
                 Property<List> prop=new Property<>(pkey,List.class);
@@ -118,6 +115,19 @@ public class ArgsConfig extends Config.Base{
             cwd=cwd.replace("\\", "/").replace("/./","/");
             if(!cwd.endsWith("/")) cwd+="/";
             APP_WORKDIR.set(this, cwd);
+        }
+        String conf=null;
+        String[] confs=new String[]{APP_SETTINGS.get(this),"./etc","./conf","./config","../etc","../conf","../config"};
+        for(String c:confs){
+            if(c==null) continue;
+            File f=new File(c);
+            if(f.exists() && f.isFile()){
+                conf=c;break;
+            }
+        }
+        if(conf!=null){ // we got settings file
+            conf=conf.replace("\\", "/").replace("/./","/");
+            APP_SETTINGS.set(this, cwd);
         }
         // also logging level and format
         Logger root=Log.setup();

@@ -30,11 +30,15 @@ import java.nio.charset.StandardCharsets;
  * such as Template or FileServe (unless overriden.)
  */
 public class Resources {
+    public static interface PathRewrite{
+        public String rewritePath(String path,Object context);
+    }
     public static Object[] search_path;
     /** appends one+ paths to search at position pos. 
      * neg pos substracts from end 
      */
     public static Object[] appendSearch(int pos,Object ...src){
+        //search_history.clear();
         if(search_path==null) search_path=new Object[0];
         if(pos<0) pos=search_path.length+pos+1;
         if(pos<0 || pos>search_path.length) throw new IndexOutOfBoundsException("at:"+pos);
@@ -52,9 +56,14 @@ public class Resources {
         search_path=new_path;
         return search_path;
     }
-    public static interface PathRewrite{
-        public String rewritePath(String path,Object context);
-    }
+    /** returns first good URL for path over sp or search_path.
+     * Along the way it optionally rewrites path to adjust to search path context.
+     * When possible it records lastModified timestamp in search_history for later lookup.
+     * @param remap rewrite rule if any
+     * @param path path to locate
+     * @param sp search path reverts to search_path if not specified
+     * @return URL that can be read.
+     */
     public static URL findFirst(PathRewrite remap,String path,Object ... sp){
         String path0=path;
         if(sp==null || sp.length==0) sp=search_path;
@@ -67,7 +76,9 @@ public class Resources {
                 File ff=new File(base.toString(),path);
                 if(ff.exists()){
                     try {
-                        return ff.toURI().toURL();
+                        URL ret=ff.toURI().toURL();
+                        //search_history.put(path0,ff.lastModified());
+                        return ret;
                     } catch (MalformedURLException e) {
                         continue;
                     }
@@ -76,7 +87,9 @@ public class Resources {
                 File ff=new File((File)base,path);
                 if(ff.exists()){
                     try {
-                        return ff.toURI().toURL();
+                        URL ret=ff.toURI().toURL();
+                        //search_history.put(path,ff.lastModified());
+                        return ret;
                     } catch (MalformedURLException e) {
                         continue;
                     }
@@ -91,7 +104,10 @@ public class Resources {
                             huc=(HttpURLConnection) ret.openConnection();
                             huc.setRequestMethod("HEAD");
                             int responseCode = huc.getResponseCode();
-                            if(responseCode==HttpURLConnection.HTTP_OK) return ret;
+                            if(responseCode==HttpURLConnection.HTTP_OK){
+                                //search_history.put(path,huc.getLastModified());
+                                return ret;
+                            }
                         }finally{
                             if(huc!=null) huc.disconnect();
                         }
@@ -99,11 +115,17 @@ public class Resources {
                     if(proto.startsWith("jar")){
                         JarURLConnection juc = null;
                         juc=(JarURLConnection) ret.openConnection();
-                        if(juc.getJarEntry()!=null) return ret;
+                        if(juc.getJarEntry()!=null){
+                            //search_history.put(path,juc.getLastModified());
+                            return ret;
+                        }
                     }
                     if(proto.equals("file")){
                         File f=new File(ret.getPath());
-                        if(f.exists()) return ret;
+                        if(f.exists()){
+                            //search_history.put(path,f.lastModified());
+                            return ret;
+                        }
                     }
                 } catch (MalformedURLException e) {
                     continue;
@@ -114,6 +136,11 @@ public class Resources {
         }
         return null;
     }
+    /** if recorded in previous searches returns time modified. */
+    // public static Long lastModified(String path){
+    //     Long ret=search_history.get(path);
+    //     return ret;
+    // }
     public static String toString(URL url) throws IOException{
         return toString(url,StandardCharsets.UTF_8);
     }

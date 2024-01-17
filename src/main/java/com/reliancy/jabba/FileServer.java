@@ -6,12 +6,15 @@ You may obtain a copy of the License at https://www.gnu.org/licenses/lgpl-3.0.en
 You may not use this file except in compliance with the License. 
 */
 package com.reliancy.jabba;
+import com.reliancy.util.Handy;
+import com.reliancy.util.LRUCache;
 import com.reliancy.util.Resources;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Iterator;
 import org.slf4j.Logger;
@@ -21,12 +24,14 @@ import org.slf4j.Logger;
  * TODO: putting, posting and maybe full DAV.
  * TODO: We will need proper security.
  * TODO: We will also add in memory serving.
+ * We have added cache control and etag support.
  * Please note Router is for routing. 
  * Bucket is there to process input/output given verbs over resources under it.
  */
 public class FileServer extends EndPoint implements AppModule,Resources.PathRewrite{
     /** Bucket interface to abstract i/o and provide easier extensibility. 
      * asContainer matches path and then returns local-to-packet path.
+     * signature returns a hash over lastModified or content that reflects modification.
     */
     public static interface Bucket{
         String getPrefix();
@@ -34,11 +39,14 @@ public class FileServer extends EndPoint implements AppModule,Resources.PathRewr
         boolean equals(String pref);
         InputStream openSource(String local_path,FileServer user) throws IOException;
         OutputStream openSink(String local_path,FileServer user) throws IOException;
+        String signature(String local_path);
     }
     public static class FileBucket implements Bucket{
         final String prefix;
         String[] extAllowed;
         Object[] domain;
+        LRUCache<String,Long> hit_history=new LRUCache<>(2*Runtime.getRuntime().availableProcessors());
+
         public FileBucket(String prefix){
             this.prefix=prefix;
             extAllowed=new String[]{};
@@ -77,10 +85,18 @@ public class FileServer extends EndPoint implements AppModule,Resources.PathRewr
             Object[] sp=getDomain();
             URL f=Resources.findFirst(user,local_path, sp);
             if(f==null) return null; // skip if rpath not located
-            return f.openStream();
+            URLConnection conn=f.openConnection();
+            hit_history.put(local_path,conn.getLastModified()); // pull last modified for signature
+            return conn.getInputStream();
         }
         public OutputStream openSink(String local_path,FileServer user) throws IOException{
             return null;
+        }
+        public String signature(String local_path){
+            Long last_modified=hit_history.get(local_path);
+            if(last_modified==null) return null;
+            String sig=String.valueOf(last_modified);
+            return Handy.hashMD5(sig);
         }
     }
     final ArrayList<Bucket> buckets=new ArrayList<>();
@@ -120,26 +136,43 @@ public class FileServer extends EndPoint implements AppModule,Resources.PathRewr
     }
     @Override
     public void serve(Request request, Response response) throws IOException {
+        String verb=request.getVerb();
         String path=request.getPath();
         Logger logger=log();
         boolean atDebug=logger.isDebugEnabled();
-        if(atDebug) logger.debug("to serve:"+path);
+        if(atDebug) logger.debug("{0}:{1}",verb,path);
         for(Bucket bucket:buckets){
             String local_path=bucket.asContained(path);
             if(local_path==null) continue; // this bucket is not accepting
-            try(InputStream ins=bucket.openSource(local_path,this)){
-                if(atDebug) logger.debug("\tfound:"+local_path);
-                String ctype=HTTP.ext2mime(local_path);
-                response.setStatus(Response.HTTP_OK);
-                response.setContentType(ctype);
-                ResponseEncoder enc=response.getEncoder();
-                enc.writeStream(ins);
-                return;
+            if(HTTP.VERB_GET.equals(verb)){
+                try(InputStream ins=bucket.openSource(local_path,this)){
+                    if(ins==null) continue; // url did not take
+                    String etag=bucket.signature(local_path);
+                    if(etag!=null){
+                        response.setHeader("Cache-Control","max-age=0, must-revalidate");
+                        response.setHeader("ETag",etag);
+                        String etag_old=request.getHeader("If-None-Match");
+                        if(etag.equals(etag_old)){
+                            // we got same etag no change
+                            response.setStatus(Response.HTTP_NOT_MODIFIED);
+                            return;
+                        }
+                    }
+                    if(atDebug) logger.debug("\tfound:"+local_path);
+                    String ctype=HTTP.ext2mime(local_path);
+                    response.setStatus(Response.HTTP_OK);
+                    response.setContentType(ctype);
+                    ResponseEncoder enc=response.getEncoder();
+                    enc.writeStream(ins);
+                    return; // we got something
+                }
+            }else{
+                // these verbs are not supported
             }
         }
         response.setStatus(Response.HTTP_NOT_FOUND);
         response.getEncoder().writeln("missing file:{0}",path);
-        logger.error("not found:"+path);
+        logger.error("not found:{0}",path);
     }
     /**
      * Will render a URL resource to response.

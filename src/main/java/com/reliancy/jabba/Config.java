@@ -25,11 +25,13 @@ public interface Config extends Iterable<Config.Property<?>>{
         V initial;
         boolean required;
         boolean writable;
+        boolean persistent;
         public Property(String name,Class<V> typ){
             this.name=name;
             this.typ=typ;
             required=false;
             writable=true;
+            persistent=false;
         }
         @Override
         public String toString(){
@@ -43,14 +45,24 @@ public interface Config extends Iterable<Config.Property<?>>{
         public boolean isRequired(){return required;}
         public Property<V> setWritable(boolean f){writable=f;return this;}
         public boolean isWritable(){return writable;}
+        public Property<V> setPersistent(boolean f){persistent=f;return this;}
+        public boolean isPersistent(){return persistent;}
         public V get(Config store,V def){
             return store.getProperty(this,def);
         }
         public V get(Config store){
             return get(store,initial);
         }
-        public void set(Config store,V val){
+        public String getString(Config conf){
+            V val=get(conf);
+            return String.valueOf(Handy.normalize(String.class,val));
+        }
+        public Property<V> set(Config store,V val){
             store.setProperty(this, val);
+            return this;
+        }
+        public void setString(Config store,String val){
+            store.setProperty(this, adaptValue(val));
         }
         /** converts value such as string to expected type if possible. */
         public V adaptValue(Object val){
@@ -100,6 +112,7 @@ public interface Config extends Iterable<Config.Property<?>>{
         }
         @Override
         public <T> Config setProperty(Property<T> key, T val) {
+            //if(!key.isWritable()) throw new RuntimeException("read only property:"+key);
             setModified(key);
             props.put(key,val);
             return this;
@@ -121,6 +134,10 @@ public interface Config extends Iterable<Config.Property<?>>{
             for(Property<?> pp:p) schema.add(pp);
             return this;
         }
+        @Override
+        public Property<?>[] getSchema(){
+            return schema.toArray(new Property<?>[schema.size()]);
+        }
     }
 
     public static final Property<String> LOG_LEVEL=new Property<>("LOG_LEVEL",String.class);
@@ -130,6 +147,7 @@ public interface Config extends Iterable<Config.Property<?>>{
     public static final Property<String> APP_TITLE=new Property<>("APP_TITLE",String.class);
     public static final Property<String> APP_INFO=new Property<>("APP_INFO",String.class);
     public static final Property<String> APP_WORKDIR=new Property<>("APP_WORKDIR",String.class);
+    public static final Property<String> APP_SETTINGS=new Property<>("APP_SETTINGS",String.class);
     public static final Property<String> APP_CLASS=new Property<>("APP_CLASS",String.class);
     public static final Property<List> APP_ARGS=new Property<>("APP_ARGS",List.class);
 
@@ -143,5 +161,5 @@ public interface Config extends Iterable<Config.Property<?>>{
     public <T> T getProperty(Property<T> key,T def);
     public <T> T delProperty(Property<T> key);
     public Config importSchema(boolean clear,Property<?> ...p);
-
+    public Property<?>[] getSchema();
 }

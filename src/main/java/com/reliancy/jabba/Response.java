@@ -33,6 +33,7 @@ public class Response {
     public static final int HTTP_FORBIDDEN=HttpServletResponse.SC_FORBIDDEN;
     public static final int HTTP_TEMPORARY_REDIRECT=HttpServletResponse.SC_TEMPORARY_REDIRECT;
     public static final int HTTP_FOUND_REDIRECT=HttpServletResponse.SC_FOUND;
+    public static final int HTTP_NOT_MODIFIED=HttpServletResponse.SC_NOT_MODIFIED;
     
     final protected HttpServletResponse  http_response;
     final protected Writer char_response;

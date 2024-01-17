@@ -15,6 +15,12 @@ import java.util.HashMap;
  * 
 */
 public final class HTTP {
+    public static String VERB_GET="GET";
+    public static String VERB_PUT="PUT";
+    public static String VERB_DEL="DELETE";
+    public static String VERB_POST="POST";
+    public static String VERB_HEAD="HEAD";
+    
     public static String MIME_PLAIN="text/plain";
     public static String MIME_JSON="application/json";
     public static String MIME_BYTES="application/octet-stream";
