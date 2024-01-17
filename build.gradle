@@ -112,6 +112,7 @@ dependencies {
     testImplementation "junit:junit:4.12"
 }
 test {
+  environment "DB_URL", project.db_url
   testLogging {
     // Make sure output from
     // standard out or error is shown
