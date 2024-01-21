@@ -5,5 +5,7 @@ package com.reliancy.jabba;
  */
 public interface AppModule {
     void publish(App app);
-    default void retract(App app){};
+    default void retract(App app){
+        app.retractModule(this,"*");
+    };
 }

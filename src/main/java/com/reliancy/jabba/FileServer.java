@@ -140,11 +140,11 @@ public class FileServer extends EndPoint implements AppModule,Resources.PathRewr
         String path=request.getPath();
         Logger logger=log();
         boolean atDebug=logger.isDebugEnabled();
-        if(atDebug) logger.debug("{0}:{1}",verb,path);
-        for(Bucket bucket:buckets){
-            String local_path=bucket.asContained(path);
-            if(local_path==null) continue; // this bucket is not accepting
-            if(HTTP.VERB_GET.equals(verb)){
+        if(atDebug) logger.debug("{}:{}",verb,path);
+        if(HTTP.VERB_GET.equals(verb)){
+            for(Bucket bucket:buckets){
+                String local_path=bucket.asContained(path);
+                if(local_path==null) continue; // this bucket is not accepting
                 try(InputStream ins=bucket.openSource(local_path,this)){
                     if(ins==null) continue; // url did not take
                     String etag=bucket.signature(local_path);
@@ -166,30 +166,38 @@ public class FileServer extends EndPoint implements AppModule,Resources.PathRewr
                     enc.writeStream(ins);
                     return; // we got something
                 }
-            }else{
-                // these verbs are not supported
             }
+        }else{
+            // these verbs are not supported
         }
         response.setStatus(Response.HTTP_NOT_FOUND);
-        response.getEncoder().writeln("missing file:{0}",path);
-        logger.error("not found:{0}",path);
+        response.getEncoder().writeln("missing file:"+path);
+        logger.error("not found:{}",path);
     }
     /**
      * Will render a URL resource to response.
      * @param f
      * @param response
      */
-    protected static void writeResource(URL f, Response response) throws IOException{
-        //log().info("writing:"+f);
-        ResponseEncoder enc=response.getEncoder();
+    public static boolean sendData(URL f, Response response) throws IOException{
         try(InputStream is=f.openStream()){
-            String ctype=HTTP.guess_mime(f);
+            if(is==null) return false;
             response.setStatus(Response.HTTP_OK);
+            String ctype=HTTP.guess_mime(f);
             response.setContentType(ctype);
+            ResponseEncoder enc=response.getEncoder();
             enc.writeStream(is);
+            return true;
         }
     }
-    /** adds a route which serves files.
+    public static boolean sendData(InputStream istr, Response response) throws IOException{
+        if(istr==null) return false;
+        ResponseEncoder enc=response.getEncoder();
+        response.setStatus(Response.HTTP_OK);
+        enc.writeStream(istr);
+        return true;
+    }
+        /** adds a route which serves files.
      * if disk_path is ommited (0 len) or null we use Resources.search_path.
      * @param bucket resource holder to add 
      */

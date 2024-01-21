@@ -18,6 +18,7 @@ import jakarta.servlet.http.HttpServletRequest;
 public class Request {
     final HttpServletRequest  http_request;
     final HashMap<String,String> pathParams=new HashMap<>();
+    String pathOverride;
     public Request(HttpServletRequest http_request) {
         this.http_request = http_request;
     }
@@ -25,9 +26,16 @@ public class Request {
         return pathParams;
     }
     public String getPath() {
-        return http_request.getPathInfo();
+        if(pathOverride!=null){
+            return pathOverride;
+        }else{
+            return http_request.getPathInfo();
+        }
     }
-
+    public Request setPath(String path){
+        pathOverride=path;
+        return this;
+    }
     public String getVerb() {
         return http_request.getMethod();
     }
@@ -76,6 +84,10 @@ public class Request {
         "HTTP_FORWARDED",
         "HTTP_VIA",
         "REMOTE_ADDR" };
+    /** 
+     * This method will consult several headers to obain ip address.
+     * @return best guess for remote address.
+     */
     public String getRemoteAddress() {
         for (String header : HEADERS4IP) {
             String ip = getHeader(header);
@@ -83,5 +95,28 @@ public class Request {
             return ip.contains(",")?ip.split(",",2)[0]:ip;
         }
         return http_request.getRemoteAddr();
+    }
+    /**
+     * will return shema://host:port/context
+     * @return everything preceeding the path.
+     */
+    public String getMount(){
+        String scheme = http_request.getScheme();
+        String host = http_request.getHeader("Host");        // includes server name and server port
+        if(host==null || host.trim().isEmpty()){
+            // try differenty for host
+            String serverName = http_request.getServerName();
+            int serverPort = http_request.getServerPort();
+            host=serverName+":"+serverPort;
+        }
+        String resultPath = scheme + "://" + host;
+        String contextPath = http_request.getContextPath();       // includes leading forward slash
+        if(contextPath!=null){
+            resultPath+= contextPath;
+        }
+        return resultPath;
+    }
+    public String getProtocol(){
+        return http_request.getProtocol();
     }
 }

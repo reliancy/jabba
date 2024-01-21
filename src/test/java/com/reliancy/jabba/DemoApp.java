@@ -41,6 +41,7 @@ public class DemoApp extends JettyApp implements AppModule{
         Resources.appendSearch(0,cls);
         String work_dir=ArgsConfig.APP_WORKDIR.get(conf);
         if(work_dir!=null) Resources.appendSearch(0,work_dir);
+        log().info("work_dir:{}",work_dir);
         //for(Object p:Resources.search_path){
         //    System.out.println("sp:"+p);
         //}
@@ -52,7 +53,7 @@ public class DemoApp extends JettyApp implements AppModule{
         app.setSecurityPolicy(secpol);
         // install router
         app.setRouter(new Router());
-        DemoEP ep=new DemoEP();
+        StatusMod ep=new StatusMod();
         ep.publish(app);
         // install file sever endpoint
         FileServer fs=new FileServer("/static","/public");
@@ -60,6 +61,8 @@ public class DemoApp extends JettyApp implements AppModule{
         Menu top_menu=Menu.request(Menu.TOP);
         top_menu.add(new MenuItem("home")).addSpacer().add(new MenuItem("login"));
         top_menu.setTitle("Jabba3");
+        app.getRouter().compile();
+        System.out.println(app.getRouter().regex);
     }
     @Override
     public void publish(App app) {
@@ -120,6 +123,7 @@ public class DemoApp extends JettyApp implements AppModule{
     @Routed
     public void login(com.reliancy.jabba.Request req,Response resp){
         //return "login form here";
+        log().info("login here");
         if(req.getVerb().equals("POST")){
             // here we need to process login and redirect
             AppSession ass=AppSession.getInstance();

@@ -24,7 +24,7 @@ public abstract class Processor {
 
     public Processor(String id){
         next=null;
-        this.id=id!=null?id:this.getClass().getSimpleName().toLowerCase();
+        this.id=id!=null?id:this.getClass().getSimpleName();
         active=true;
     }
     public String getId(){

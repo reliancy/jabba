@@ -34,6 +34,7 @@ public class Response {
     public static final int HTTP_TEMPORARY_REDIRECT=HttpServletResponse.SC_TEMPORARY_REDIRECT;
     public static final int HTTP_FOUND_REDIRECT=HttpServletResponse.SC_FOUND;
     public static final int HTTP_NOT_MODIFIED=HttpServletResponse.SC_NOT_MODIFIED;
+    public static final int HTTP_INTERNAL_ERROR=HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
     
     final protected HttpServletResponse  http_response;
     final protected Writer char_response;

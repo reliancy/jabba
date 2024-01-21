@@ -9,8 +9,13 @@ You may not use this file except in compliance with the License.
 package com.reliancy.jabba;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
 import com.reliancy.dbo.Terminal;
 import com.reliancy.jabba.sec.SecurityPolicy;
+import com.reliancy.jabba.ui.Rendering;
+import com.reliancy.jabba.ui.Template;
 import com.reliancy.util.CodeException;
 import com.reliancy.util.ResultCode;
 
@@ -40,7 +45,8 @@ public abstract class App extends Processor{
     protected Router router=null;
     protected SecurityPolicy policy=null;
     protected Terminal storage=null;
-    
+    protected Map<String,AppModule> modules;
+
     public App(String id) {
         super(id);
     }
@@ -57,6 +63,71 @@ public abstract class App extends Processor{
         if(first!=null && resp.getStatus()==null) first.process(req, resp);
         if(router!=null && resp.getStatus()==null) router.process(req,resp);
     }
+    /** When an error occurs we need properly render exception.
+     * if html is accepted we try to render a valid response with n error within a template so it fits with the app.
+     * for all others we set error status code.
+     * for json,xml and plain we render into a message template for the rest we do nothing.
+     * this method returns true if a response was generated. in overloaded methods
+     * if false is returned we can generate response the status is set to 500 already.
+     * @param req incoming request
+     * @param ex exception state
+     * @param resp response to generate
+     * @return true if handled else it signifies we should do somthing in overloads.
+     * @throws IOException
+     */
+    public boolean processError(com.reliancy.jabba.Request req,Throwable ex,com.reliancy.jabba.Response resp) throws IOException{
+        log().error("error:",ex);
+        String accepted_format=req.getHeader("Accept");
+        boolean present=accepted_format!=null;
+        if(present && (
+            accepted_format.contains("/html")
+            || accepted_format.contains("/xhtml")
+            )){
+            // we have html request
+            resp.setContentType(HTTP.MIME_HTML);
+            Template t=Template.find("/templates/error.hbs");
+            if(t==null){ // no template found
+                resp.setStatus(Response.HTTP_INTERNAL_ERROR);
+                if(ex instanceof IOException) throw ((IOException)ex);
+                else throw new RuntimeException(ex);
+            }
+            Rendering.begin(t).with(ex).end(resp);
+            return true;
+        }else{
+            // for all other cases we first flag it as error
+            resp.setStatus(Response.HTTP_INTERNAL_ERROR);
+        } 
+        // next we format a few common and supported messages
+        if(present && accepted_format.contains("/json")){
+            ResponseEncoder enc=resp.getEncoder();
+            if(enc.getErrorFormat()==null){
+                String template="'{'\n\t\"status\":\"error\",\n\t\"title\":\"{0}\",\n\t\"message\":\"{1}\"\n'}'\n";
+                enc.setErrorFormat(template);
+            }
+            enc.writeError(ex);
+            return true;
+        }
+        if(present && accepted_format.contains("/xml")){
+            ResponseEncoder enc=resp.getEncoder();
+            if(enc.getErrorFormat()==null){
+                String template="<response>\n\t<status>error</status>\n\t<title>{0}</title>\n\t<message>{1}</message>\n</response>\n";
+                enc.setErrorFormat(template);
+            }
+            enc.writeError(ex);
+            return true;
+        }
+        if(present && accepted_format.contains("text/plain")){
+            ResponseEncoder enc=resp.getEncoder();
+            if(enc.getErrorFormat()==null){
+                String template="status=error\n\ntitle={0}\n\nmessage={1}\n\n";
+                enc.setErrorFormat(template);
+            }
+            enc.writeError(ex);
+            return true;
+        }
+        return false;
+    }
+
     /** add one or a chain of processors. */
     public <T extends Processor> T addMiddleWare(T m){
         if(m==null) return null;
@@ -183,4 +254,37 @@ public abstract class App extends Processor{
     public Terminal getStorage(){
         return storage;
     }
+    /** register module under one or more names.
+     * if no names are provided just calls module to publish itself.
+     * @param module
+     * @param names
+     */
+    public void publishModule(AppModule module,String...names){
+        if(names.length==0){
+            module.publish(this);
+        }else{
+            if(modules==null) modules=new HashMap<>();
+            for(String nm:names) if(nm!=null) modules.put(nm.toLowerCase(),module);
+        }
+    }
+    /** retracts module under given names.
+     * if no names provided calls on module to retract itself.
+     */
+    public void retractModule(AppModule module,String...names){
+        if(names.length==0){
+            module.retract(this);
+            // if injected from outside we remove those too
+            if(modules!=null) while(modules.values().remove(module));
+        }else{
+            if(modules==null) return;
+            for(String nm:names){
+                if("*".equals(nm)){ // special case to remove all
+                    while(modules.values().remove(module));
+                    break;
+                }
+                modules.remove(nm.toLowerCase());
+            }
+        }
+    }
+
 }

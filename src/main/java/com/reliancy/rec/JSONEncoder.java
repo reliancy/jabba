@@ -140,7 +140,7 @@ public class JSONEncoder{
 			// we must be consistent so that repeated parse and encode works and not too smart here
 			// we need to put quotes around unless
 			if (!jsontxt) {
-				str = escape(str);
+				str = escape(str).toString();
 				if (o != null) {
 					o.append('"');
 				}
@@ -247,48 +247,48 @@ public class JSONEncoder{
 	 * @param str input string
 	 * @return output after encoding special chars
 	 */
-	public static String escape(String str) {
+	public static CharSequence escape(CharSequence str) {
 		StringBuilder buf = null;
 		for (int i = 0; i < str.length(); i++) {
 			char ch = str.charAt(i);
 			switch (ch) {
 				case '"':
-					if(buf==null) buf=new StringBuilder(str.substring(0,i));
+					if(buf==null) buf=new StringBuilder(str.subSequence(0,i));
 					buf.append("\\\"");
 					break;
 				case '\\':
-					if(buf==null) buf=new StringBuilder(str.substring(0,i));
+					if(buf==null) buf=new StringBuilder(str.subSequence(0,i));
 					buf.append("\\\\");
 					break;
 				case '/':
-					if(buf==null) buf=new StringBuilder(str.substring(0,i));
+					if(buf==null) buf=new StringBuilder(str.subSequence(0,i));
 					buf.append("\\/");
 					break;
 				case '\b':
-					if(buf==null) buf=new StringBuilder(str.substring(0,i));
+					if(buf==null) buf=new StringBuilder(str.subSequence(0,i));
 					buf.append("\\b");
 					break;
 				case '\f':
-					if(buf==null) buf=new StringBuilder(str.substring(0,i));
+					if(buf==null) buf=new StringBuilder(str.subSequence(0,i));
 					buf.append("\\f");
 					break;
 				case '\n':
-					if(buf==null) buf=new StringBuilder(str.substring(0,i));
+					if(buf==null) buf=new StringBuilder(str.subSequence(0,i));
 					buf.append("\\n");
 					break;
 				case '\r':
-					if(buf==null) buf=new StringBuilder(str.substring(0,i));
+					if(buf==null) buf=new StringBuilder(str.subSequence(0,i));
 					buf.append("\\r");
 					break;
 				case '\t':
-					if(buf==null) buf=new StringBuilder(str.substring(0,i));
+					if(buf==null) buf=new StringBuilder(str.subSequence(0,i));
 					buf.append("\\t");
 					break;
 				default:
 					if(buf!=null) buf.append(ch);
 			}
 		}
-		return buf!=null?buf.toString():str;
+		return buf!=null?buf:str;
 	}
 
 }

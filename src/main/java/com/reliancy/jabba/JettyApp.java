@@ -8,6 +8,7 @@ You may not use this file except in compliance with the License.
 package com.reliancy.jabba;
 
 import java.io.IOException;
+import java.text.MessageFormat;
 import java.util.EventListener;
 
 import com.reliancy.jabba.sec.SecurityPolicy;
@@ -16,11 +17,19 @@ import com.reliancy.jabba.ui.Menu;
 import com.reliancy.jabba.ui.MenuItem;
 import com.reliancy.jabba.ui.Rendering;
 import com.reliancy.jabba.ui.Template;
+import com.reliancy.rec.JSONEncoder;
+import com.reliancy.util.CodeException;
 import com.reliancy.util.Log;
 import com.reliancy.util.Resources;
 
+import org.eclipse.jetty.http2.server.HTTP2CServerConnectionFactory;
+import org.eclipse.jetty.http2.server.HTTP2ServerConnectionFactory;
 import org.eclipse.jetty.server.Connector;
+import org.eclipse.jetty.server.ForwardedRequestCustomizer;
 import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.server.HttpConfiguration;
+import org.eclipse.jetty.server.HttpConnectionFactory;
+import org.eclipse.jetty.server.MultiPartFormDataCompliance;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
@@ -28,10 +37,14 @@ import org.eclipse.jetty.server.ServerConnector;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+
 /**
  * Router is entry point and servlet implementation that dispatches messages to our endpoints.
  * It will launch an embedded jetty server.
- * It will provide facilities to register endpoints.
+ * It will provide facilities to register endpoints via router.
+ * Mostly new routes are injected via AppModules which publish themselves.
+ * JettyApp installs ForwardCustomizer to react to reverse proxy setups.
+ * 
  */
 public class JettyApp extends App implements Handler{
     enum State{
@@ -52,15 +65,22 @@ public class JettyApp extends App implements Handler{
         jetty.setHandler(this);
         _state=State.STOPPED;
     }
-    /** implementation of jetty handler interface */
     public Connector[] getConnectors(){
         if(connectors!=null) return connectors;
-        ServerConnector connector = new ServerConnector(jetty);
-        connector.setReuseAddress(false);
-        connector.setPort(8090);
-        connectors=new Connector[] {connector};
+        // Create HTTP Config
+        HttpConfiguration httpConfig = new HttpConfiguration();
+        // Add support for X-Forwarded headers
+        httpConfig.addCustomizer( new ForwardedRequestCustomizer() );
+        // Create the http connector
+        HttpConnectionFactory http11 = new HttpConnectionFactory( httpConfig );
+        HTTP2ServerConnectionFactory h2c = new HTTP2CServerConnectionFactory(httpConfig);
+        ServerConnector httpConn = new ServerConnector(jetty,http11,h2c);
+        httpConn.setReuseAddress(false);
+        httpConn.setPort(8090);
+        connectors=new Connector[] {httpConn};
         return connectors;
     }
+    /** implementation of jetty handler interface */
     @Override
     public Server getServer() {
         return jetty;
@@ -68,12 +88,10 @@ public class JettyApp extends App implements Handler{
 
     @Override
     public void setServer(Server arg0) {
-        System.out.println("setServer..."+jetty+"/"+arg0);
         jetty=arg0;
     }
     @Override
     public boolean addEventListener(EventListener arg0) {
-        System.out.println("adding evt listener...");
         return false;
     }
     @Override
@@ -160,16 +178,8 @@ public class JettyApp extends App implements Handler{
         try{
             ss.begin(null, req, resp);
             process(req,resp);
-        }catch(IOException ioex){ 
-            Template t=Template.find("/templates/error.hbs");
-            if(t==null) throw ioex;
-            Rendering.begin(t).with(ioex).end(resp);
-            log().error("error:",ioex);
-        }catch(RuntimeException rex){
-            Template t=Template.find("/templates/error.hbs");
-            if(t==null) throw rex;
-            Rendering.begin(t).with(rex).end(resp);
-            log().error("error:",rex);
+        }catch(Exception ioex){ 
+            processError(req,ioex,resp);
         }finally{
             baseRequest.setHandled(true);
             ss.end();
@@ -246,7 +256,7 @@ public class JettyApp extends App implements Handler{
         app.setSecurityPolicy(secpol);
         // install router
         app.setRouter(new Router());
-        DemoEP ep=new DemoEP();
+        StatusMod ep=new StatusMod();
         ep.publish(app);
         // install file sever endpoint
         FileServer fs=new FileServer("/static","/public");

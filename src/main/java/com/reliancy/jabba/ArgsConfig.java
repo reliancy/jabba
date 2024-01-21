@@ -130,6 +130,9 @@ public class ArgsConfig extends Config.Base{
             APP_SETTINGS.set(this, cwd);
         }
         // also logging level and format
+        // System.out.println("LogLog:"+LOG_LEVEL.get(this));
+        // System.out.println("ENV:"+System.getenv("LOG_LEVEL"));
+        // LOG_LEVEL.set(this,"INFO");
         Logger root=Log.setup();
         Log.setLevel(root,LOG_LEVEL.get(this));
         return this;

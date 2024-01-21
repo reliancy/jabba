@@ -17,15 +17,24 @@ application{
   mainClass=(group+'.'+name+'.JettyApp')
 }
 java{
-  sourceCompatibility = 1.8
-  targetCompatibility = 1.8
+  // make our library a bit more compatible (jetty forced 11 else it would have been 1.8)
+  sourceCompatibility = JavaVersion.VERSION_11
+  targetCompatibility = JavaVersion.VERSION_11
 }
 
-// print some info for orientation
-//println("group:"+group);
-//println("name:"+name);
-//println("version:"+version);
-//println("entry:"+mainClassName);
+dependencies {
+  def jettyVersion="11.0.18"
+    implementation "org.eclipse.jetty:jetty-server:${jettyVersion}"
+    implementation "org.eclipse.jetty.http2:http2-server:${jettyVersion}"
+    implementation "org.slf4j:slf4j-jdk14:2.0.10"
+    //implementation "org.slf4j:slf4j-simple:2.0.10"
+    //implementation 'com.hubspot.jinjava:jinjava:2.5.10'
+    implementation 'com.github.jknack:handlebars:4.3.0'
+    implementation 'com.h2database:h2:2.1.214'
+    implementation 'org.postgresql:postgresql:42.5.0'
+    implementation 'com.zaxxer:HikariCP:5.0.0'
+    testImplementation "junit:junit:4.12"
+}
 
 sourceSets {
   main {
@@ -96,20 +105,6 @@ javadoc {
       setAuthor true
       links "https://docs.oracle.com/javase/8/docs/api/"
     }
-}
-dependencies {
-    implementation "org.eclipse.jetty:jetty-server:11.0.1"
-    implementation "org.slf4j:slf4j-jdk14:2.0.10"
-    //implementation "org.slf4j:slf4j-simple:2.0.10"
-    //implementation 'com.hubspot.jinjava:jinjava:2.5.10'
-    implementation 'com.github.jknack:handlebars:4.3.0'
-    implementation 'com.h2database:h2:2.1.214'
-    // https://mvnrepository.com/artifact/org.postgresql/postgresql
-    implementation 'org.postgresql:postgresql:42.5.0'
-    // https://mvnrepository.com/artifact/com.zaxxer/HikariCP
-    implementation 'com.zaxxer:HikariCP:5.0.0'
-
-    testImplementation "junit:junit:4.12"
 }
 test {
   environment "DB_URL", project.db_url

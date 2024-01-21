@@ -28,7 +28,7 @@ public class Router extends Processor{
     Pattern regex;
 
     public Router() {
-        super("router");
+        super("Router");
     }
     @Override
     public void before(Request request, Response response) throws IOException {
@@ -64,8 +64,27 @@ public class Router extends Processor{
             resp.getEncoder().writeln("could not resolve path:"+path);
         }
     }
+    /** Lookup of endpoints by full routing string.
+     * that includes verb.
+     * @param r routing path
+     * @return endpoint matching path
+     */
     public EndPoint getRoute(String r){
         return routes.get(r);
+    }
+    /** Lookup of endpoint by method name or part of it.
+     * matches if endpoint id endswith method_name.
+     * matches case insensitively.
+     * @param method_name ending part of a method
+     * @return matched endpoint
+     */
+    public EndPoint getRouteByMethod(String method_name){
+        method_name=method_name.toLowerCase();
+        for(EndPoint ep:routes.values()){
+            String nm=ep.getId().toLowerCase();
+            if(nm.endsWith(method_name)) return ep;
+        }
+        return null;
     }
     public void addRoute(String verb,String path, EndPoint mm) {
         RouteDetector det=new RouteDetector(verb,path);

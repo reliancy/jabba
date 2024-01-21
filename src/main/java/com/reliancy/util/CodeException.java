@@ -85,7 +85,7 @@ public class CodeException extends RuntimeException {
 	}
 	public static Throwable fillUserMessage(Throwable ex,StringBuilder msg,StringBuilder title) {
 		Throwable c = ex;
-		System.out.println(">>>"+c+"/"+c.getCause());
+		//System.out.println(">>>"+c+"/"+c.getCause());
 		while(c.getCause()!=null){
 			Throwable cc= c.getCause();
 			if(c.getMessage()==null){
@@ -93,19 +93,19 @@ public class CodeException extends RuntimeException {
 			}
 			String cMsg=c.getMessage();
 			String ccMsg=cc.getMessage();
-			System.out.println("!!!"+cMsg+"/"+c.getClass().getName()+"/"+cc.getClass().getName());
+			//System.out.println("!!!"+cMsg+"/"+c.getClass().getName()+"/"+cc.getClass().getName());
 			boolean wrapped=(c instanceof CodeException) && ((CodeException)c).getCode()==ResultCode.FAILURE;
 			boolean plain_at=cMsg.equals(c.getClass().getName());
 			boolean plain_sub=cMsg.equals(cc.getClass().getName());
 			boolean same_msg=cMsg.equalsIgnoreCase(ccMsg);
-			System.out.println("\t"+plain_sub+"#"+cc+"$"+cc.getCause()+"*"+cc.getMessage());
+			//System.out.println("\t"+plain_sub+"#"+cc+"$"+cc.getCause()+"*"+cc.getMessage());
 			if(plain_at || plain_sub || cMsg.startsWith(cc.getClass().getName()+":") || same_msg || wrapped){
 				c=cc;
 			}else{
 				break;
 			}
 		}
-		System.out.println("CC:"+c);
+		//System.out.println("CC:"+c);
 		// take care of title
 		String _title=c.getClass().getSimpleName();
 		if(c instanceof CodeException){
