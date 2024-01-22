@@ -24,7 +24,6 @@ public class DemoApp extends JettyApp implements AppModule{
     public static void main( String[] args ) throws Exception{
         Config cnf=new ArgsConfig(args).load();
         JettyApp app=new DemoApp();
-        app.addShutdownHook();
         app.run(cnf);
     }
     /** called from begin just before jetty starts. 

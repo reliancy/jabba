@@ -15,6 +15,7 @@ import java.util.UUID;
  * and based on it install an app wide sesson dictionary.
  */
 public class AppSessionFilter extends Processor{
+    /**special key to identify session cookie. */
     public static final String KEY_NAME="jbssid";
     AppSession.Factory factory;
     App app;

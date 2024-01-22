@@ -64,6 +64,7 @@ public class JettyApp extends App implements Handler{
         jetty = new Server();
         jetty.setHandler(this);
         _state=State.STOPPED;
+        this.addShutdownHook();
     }
     public Connector[] getConnectors(){
         if(connectors!=null) return connectors;
@@ -216,7 +217,7 @@ public class JettyApp extends App implements Handler{
      * ctrl-c works but does not perform our shutdown sequence.
      * this code interrupts jetty and then waits for app to finish.
      */
-    public void addShutdownHook(){
+    protected final void addShutdownHook(){
         final JettyApp app=this;
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             if(app.isRunning()){
@@ -268,7 +269,6 @@ public class JettyApp extends App implements Handler{
     public static void main( String[] args ) throws Exception{
         Config cnf=new ArgsConfig(args).load();
         JettyApp app=new JettyApp();
-        app.addShutdownHook();
         app.run(cnf);
     }
 

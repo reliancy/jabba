@@ -109,7 +109,10 @@ public abstract class Processor {
         if(ret==null) ret=logger=LoggerFactory.getLogger(this.getId());
         return ret;
     }
+    /** called before serve. */
     public abstract void before(Request request,Response response) throws IOException;
+    /** called after serve. */
     public abstract void after(Request request,Response response) throws IOException;
+    /** main processing and subprocessing happens here. */
     public abstract void serve(Request request,Response response) throws IOException;
 }

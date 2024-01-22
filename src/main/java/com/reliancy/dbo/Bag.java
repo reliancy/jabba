@@ -31,6 +31,7 @@ public class Bag<E> extends Observable implements Collection<E>{
         final Bag<E> bag;
         final int operation;
         final Object[] arguments;
+        
         public BagChanged(Bag<E> p,int op,Object ... args){
             bag=p;
             operation=op;

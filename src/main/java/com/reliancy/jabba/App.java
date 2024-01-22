@@ -170,10 +170,11 @@ public abstract class App extends Processor{
         }
         return null;
     }
-    
+    /** return special processor which dispatches request.s */
     public Router getRouter() {
         return router;
     }
+    /** sets the main request dispatcher. */
     public void setRouter(Router router) {
         if(this.router==router) return;
         if(this.router!=null) this.router.setParent(null);
@@ -232,6 +233,7 @@ public abstract class App extends Processor{
     public AppSessionFilter addAppSession(AppSession.Factory f){
         return addMiddleWare(new AppSessionFilter(this,f));
     }
+    /** set security policy which will recover users and also enforce permissions. */
     public SecurityPolicy setSecurityPolicy(SecurityPolicy secpol){
         if(secpol==policy) return secpol;
         if(policy!=null){
