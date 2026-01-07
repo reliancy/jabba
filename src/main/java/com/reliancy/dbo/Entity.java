@@ -81,7 +81,16 @@ public class Entity extends Hdr{
             try {
                 String sf_name=field.getName();
                 Field slot=(Field) field.get(cls);
-                slot.setId(sf_name);
+                // Only set ID if not already set (allows explicit database column name mapping)
+                // Use Field's name (database column name) if available, otherwise use Java field name
+                if(slot.getId()==null || slot.getId().isEmpty()){
+                    String dbName=slot.getName(); // This is the name passed to Field constructor (e.g., "created_on")
+                    if(dbName!=null && !dbName.isEmpty()){
+                        slot.setId(dbName);
+                    }else{
+                        slot.setId(sf_name); // Fallback to Java field name
+                    }
+                }
                 slot.setPosition(position0+slots.size());
                 slots.add(slot);
                 //System.out.println(sf_name+":"+slot+" atpos:"+slot.getPosition());

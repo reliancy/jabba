@@ -17,6 +17,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.concurrent.CompletableFuture;
 import org.slf4j.Logger;
 
 /** FileServer is an module and endpoint that exposes multiple URLs thru which files are served.

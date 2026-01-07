@@ -9,6 +9,7 @@ package com.reliancy.jabba;
 
 import java.io.IOException;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 /** AppSession middleware will inject an appsession object into callsession.
  * During each request,response we will if not alrady present extract a cookie or param
@@ -29,7 +30,7 @@ public class AppSessionFilter extends Processor{
         factory=f;
     }
     @Override
-    public void before(Request request, Response response) throws IOException {
+    public void beforeServe(Request request, Response response) throws IOException {
         String ssid=(String)request.getParam(KEY_NAME,null);
         if(ssid==null){
             UUID uuid = UUID.randomUUID();
@@ -54,13 +55,13 @@ public class AppSessionFilter extends Processor{
         css.setAppSession(ss);
     }
     @Override
-    public void after(Request request, Response response) throws IOException {
+    public void afterServe(Request request, Response response) throws IOException {
         CallSession css=CallSession.getInstance();
         AppSession ss=(AppSession) css.getAppSession();
-        response.setCookie(KEY_NAME,ss.id,15*60,false);
-    }
-    @Override
-    public void serve(Request request, Response response) throws IOException{
-
+        // Determine if request is HTTPS
+        boolean isSecure="https".equalsIgnoreCase(request.getProtocol()) || 
+                         "https".equalsIgnoreCase(request.getScheme());
+        // Set secure=true for HTTPS, HttpOnly=true always for security
+        response.setCookie(KEY_NAME,ss.id,15*60,isSecure,true);
     }
 }

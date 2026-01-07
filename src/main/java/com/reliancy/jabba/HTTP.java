@@ -25,6 +25,7 @@ public final class HTTP {
     public static String MIME_JSON="application/json";
     public static String MIME_BYTES="application/octet-stream";
     public static String MIME_HTML="text/html";
+    public static String MIME_XML="application/xml";
 
     public static HashMap<String,String> MIME_MAP=new HashMap<>();
     public static class Header{
@@ -39,8 +40,12 @@ public final class HTTP {
         public String value;
         public int maxAge;
         public boolean secure;
+        public boolean httpOnly;
+        public Cookie(String k,String v, int maxAge, boolean sec, boolean httpOnly){
+            key=k;value=v;this.maxAge=maxAge;secure=sec;this.httpOnly=httpOnly;
+        }
         public Cookie(String k,String v, int maxAge, boolean sec){
-            key=k;value=v;this.maxAge=maxAge;secure=sec;
+            this(k,v,maxAge,sec,true);
         }
     }
     /** maps extension to mime type.

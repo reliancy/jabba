@@ -2,6 +2,8 @@ package com.reliancy.jabba;
 
 import java.io.IOException;
 
+import com.reliancy.jabba.decor.Routed;
+
 public class StatusMod implements AppModule{
     @Override
     public void publish(App app) {

@@ -13,6 +13,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.junit.Test;
+
+import com.reliancy.jabba.decor.Routed;
+import com.reliancy.jabba.servlet.JettyApp;
 /**
  * Unit test for simple App.
  */

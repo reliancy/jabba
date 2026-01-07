@@ -7,6 +7,7 @@ You may not use this file except in compliance with the License.
 */
 package com.reliancy.jabba;
 import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,18 +15,20 @@ import org.slf4j.LoggerFactory;
  * App is a processor and under it a router and a chain of filters are also processors.
  * Also endpoints are processors too.
  */
-public abstract class Processor {
+public abstract class Processor implements Servant {
     protected Processor parent;
     protected Processor next;
     protected String id;
     protected boolean active;
     protected transient Config config;
     protected Logger logger;
+    protected boolean isAsync;
 
     public Processor(String id){
         next=null;
         this.id=id!=null?id:this.getClass().getSimpleName();
         active=true;
+        isAsync=false;
     }
     public String getId(){
         return id;
@@ -36,6 +39,20 @@ public abstract class Processor {
     }
     public void setNext(Processor next) {
         this.next = next;
+    }
+    /**
+     * Find a processor of the given class type in the parent chain.
+     * @param cls the class type to search for
+     * @return the processor if found, null otherwise
+     */
+    @SuppressWarnings("unchecked")
+    public <T extends Processor> T getParent(Class<T> cls) {
+        Processor p=parent;
+        while(p!=null){
+            if(cls.isAssignableFrom(p.getClass())) return (T) p;
+            p=p.getParent();
+        }
+        return null;
     }
     public Processor getParent() {
         return parent;
@@ -57,33 +74,44 @@ public abstract class Processor {
         if(parent!=null) return parent.getConfig();
         return null;
     }
-    // using config as a marker of a run so set during begin
-    // public void setConfig(Config config) {
-    //     this.config = config;
-    // }
-    /**
-     * Main event processing chain.
-     * Will go down the chain until result code is set.
+    /** Internal processing method that can handle async and non-async use cases.
+     * Process the request and response, handling async if needed.
      * @param request
      * @param response
+     * @param isAsync
      * @throws IOException
      */
-    public void process(Request request,Response response) throws IOException {
-        CallSession ss=CallSession.getInstance();
-        try{
-            ss.enter(this);
-            if(!active){
-                if(next!=null) next.process(request, response);
-            }else{
-                before(request, response);
-                if(response.getStatus()==null) serve(request, response);
-                if(next!=null && response.getStatus()==null) next.process(request, response);
-                after(request, response);
+    protected void process(Request request,Response response) throws IOException {
+        final CallSession ss=CallSession.getInstance();
+        // now we must account for async downstream
+        final Processor thisProcessor=this;
+        ss.enter(thisProcessor);
+        if(!active){
+            if(next!=null){
+                next.process(request, response);
+                return;
             }
-        }finally{
-            ss.leave(this);
+        }else{
+            beforeServe(request, response);
+            serve(request, response);
+            if(response.isPromised()==false){
+                afterServe(request, response);
+                ss.leave(thisProcessor);
+            }else{
+                response.promiseNext((value) -> {
+                    try {
+                        afterServe(request, response);
+                        return value;
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }finally{
+                        ss.leave(thisProcessor);
+                    }
+                });
+            }
         }
     }
+
     /** Place to prepare for a run. */
     public void begin(Config conf) throws Exception{
         this.config=conf;
@@ -109,10 +137,31 @@ public abstract class Processor {
         if(ret==null) ret=logger=LoggerFactory.getLogger(this.getId());
         return ret;
     }
+    /**
+     * Check if this endpoint handles async requests.
+     * @return true if method returns CompletableFuture
+     */
+    public boolean isAsync() {
+        return isAsync;
+    }
+    public void setAsync(boolean isAsync) {
+        this.isAsync = isAsync;
+    }
+
     /** called before serve. */
-    public abstract void before(Request request,Response response) throws IOException;
+    public void beforeServe(Request request,Response response) throws IOException{
+
+    }
     /** called after serve. */
-    public abstract void after(Request request,Response response) throws IOException;
-    /** main processing and subprocessing happens here. */
-    public abstract void serve(Request request,Response response) throws IOException;
+    public void afterServe(Request request,Response response) throws IOException{
+
+    }
+    /** default implementation of work. 
+     * if next processor is not null and response status is null, it will process the next processor.
+     * otherwise it will return null if sync, or a completed future if async.
+    */
+    public void serve(Request request,Response response) throws IOException{
+        if(next==null || response.getStatus()!=null) return;
+        next.process(request, response);
+    }
 }

@@ -22,10 +22,10 @@ public class TerminalTest {
         name="dbo.Maps"
     )
     public static class Maps extends DBO{
-        public static Field map_id=Field.Int("map_id").setPk(true);
-        public static Field map_name=Field.Str("map_name");
-        public static Field created=Field.DateTime("created");
-        public static Field active=Field.Bool("active");
+        public static Field map_id=Field.Int("Map_id").setPk(true);
+        public static Field map_name=Field.Str("Map_name");
+        public static Field created=Field.DateTime("Created");
+        public static Field active=Field.Bool("Active");
         static{
             //Entity.publish(Maps.class);
         }

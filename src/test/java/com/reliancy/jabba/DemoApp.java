@@ -4,8 +4,10 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.reliancy.jabba.decor.Routed;
 import com.reliancy.jabba.sec.NotAuthentic;
 import com.reliancy.jabba.sec.Secured;
+import com.reliancy.jabba.servlet.JettyApp;
 import com.reliancy.jabba.sec.SecurityActor;
 import com.reliancy.jabba.sec.SecurityPolicy;
 import com.reliancy.jabba.sec.plain.PlainSecurityStore;
@@ -22,7 +24,10 @@ import com.reliancy.util.Resources;
  */
 public class DemoApp extends JettyApp implements AppModule{
     public static void main( String[] args ) throws Exception{
-        Config cnf=new ArgsConfig(args).load();
+        ArgsConfig cnf=new ArgsConfig(args);
+        cnf.setProperty(Config.SERVER_PORT,8088);
+        cnf.setProperty(Config.LOG_LEVEL,"DEBUG");  // Set BEFORE load()
+        cnf.load();
         JettyApp app=new DemoApp();
         app.run(cnf);
     }
@@ -57,11 +62,13 @@ public class DemoApp extends JettyApp implements AppModule{
         // install file sever endpoint
         FileServer fs=new FileServer("/static","/public");
         fs.publish(app);
+        // publish DemoApp's own routes
+        this.publish(app);
         Menu top_menu=Menu.request(Menu.TOP);
         top_menu.add(new MenuItem("home")).addSpacer().add(new MenuItem("login"));
         top_menu.setTitle("Jabba3");
         app.getRouter().compile();
-        System.out.println(app.getRouter().regex);
+        log().debug("Router regex:{}",app.getRouter().regex);
     }
     @Override
     public void publish(App app) {
@@ -74,7 +81,7 @@ public class DemoApp extends JettyApp implements AppModule{
         String ret="";
         try {
                 Template t=Template.find("/templates/login.hbs");
-                System.out.println("Template:"+t);
+                log().debug("Template:{}",t);
                 ret = t.render(context).toString();
         } catch (IOException e) {
             e.printStackTrace();
@@ -127,11 +134,10 @@ public class DemoApp extends JettyApp implements AppModule{
             // here we need to process login and redirect
             AppSession ass=AppSession.getInstance();
             try{
-            System.out.println("Post login");
+            log().debug("Post login");
             String userid=(String)req.getParam("userid",null);
             String pwd=(String)req.getParam("password",null);
-            System.out.println("SS:"+ass);
-            System.out.println("P:"+userid+"/"+pwd);
+            log().debug("Session:{}",ass);
             SecurityPolicy secpol=ass.getApp().getSecurityPolicy();
             SecurityActor user=secpol.authenticate(userid, pwd);
             if(user==null) throw new NotAuthentic("invalid credentials");

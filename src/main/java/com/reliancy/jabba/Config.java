@@ -150,6 +150,8 @@ public interface Config extends Iterable<Config.Property<?>>{
     public static final Property<String> APP_SETTINGS=new Property<>("APP_SETTINGS",String.class);
     public static final Property<String> APP_CLASS=new Property<>("APP_CLASS",String.class);
     public static final Property<List> APP_ARGS=new Property<>("APP_ARGS",List.class);
+    public static final Property<String> SECRET_KEY=new Property<>("SECRET_KEY",String.class);
+    public static final Property<Integer> SERVER_PORT=new Property<>("SERVER_PORT",Integer.class).setInitial(8090);
 
     public default Config getParent(){return null;};
     public Config clear();

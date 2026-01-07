@@ -8,6 +8,7 @@ You may not use this file except in compliance with the License.
 package com.reliancy.jabba;
 
 import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
 
 /** EndPoint is a special processor usually the last in chain.
  * 
@@ -17,12 +18,5 @@ public abstract class EndPoint extends Processor{
     public EndPoint(String id) {
         super(id);
     }
-    @Override
-    public void before(Request request, Response response) throws IOException {
-    }
-    @Override
-    public void after(Request request, Response response) throws IOException {
-    }
-    public abstract void serve(Request request, Response response) throws IOException;
-    
+    public abstract void serve(Request request, Response response) throws IOException;    
 }

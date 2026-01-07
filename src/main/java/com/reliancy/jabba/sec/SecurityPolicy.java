@@ -13,6 +13,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.CompletableFuture;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -24,8 +25,10 @@ import com.reliancy.jabba.Response;
 import com.reliancy.jabba.RouteDetector;
 import com.reliancy.jabba.MethodDecorator;
 import com.reliancy.jabba.MethodEndPoint;
+import com.reliancy.jabba.Config;
 import com.reliancy.util.CodeException;
 import com.reliancy.util.Handy;
+import java.security.SecureRandom;
 
 /**
  * SecurityPolicy is a filter/processor that implements various auth protocols but also sources users.
@@ -40,7 +43,7 @@ import com.reliancy.util.Handy;
 public class SecurityPolicy extends Processor implements MethodDecorator.Factory{
     public static String REALM="reliancy";
     public static final String KEY_NAME="jbauth";
-    protected String secret="sdfklgj 7150 9178-54=09";
+    protected String secret=null;
     protected ArrayList<SecurityProtocol> protocols;
     protected SecurityActor admin;
     protected SecurityActor guest;
@@ -54,6 +57,29 @@ public class SecurityPolicy extends Processor implements MethodDecorator.Factory
         protocols.add(new SecurityProtocol.Basic());
     }
     protected String getSecret(){
+        if(secret==null){
+            // Try to load from config first
+            Config conf=getConfig();
+            if(conf!=null){
+                secret=Config.SECRET_KEY.get(conf,null);
+            }
+            // Try environment variable
+            if(secret==null || secret.isEmpty()){
+                secret=System.getenv("JABBA_SECRET_KEY");
+            }
+            // Try system property
+            if(secret==null || secret.isEmpty()){
+                secret=System.getProperty("jabba.secret.key");
+            }
+            // Generate secure random secret if still not found
+            if(secret==null || secret.isEmpty()){
+                SecureRandom random=new SecureRandom();
+                byte[] bytes=new byte[32];
+                random.nextBytes(bytes);
+                secret=java.util.Base64.getEncoder().encodeToString(bytes);
+                log().warn("No secret key configured. Generated a random secret. This should be set via SECRET_KEY config, JABBA_SECRET_KEY environment variable, or jabba.secret.key system property for production use.");
+            }
+        }
         return secret;
     }
     public SecurityPolicy setSecured(String path,Secured info){
@@ -70,7 +96,7 @@ public class SecurityPolicy extends Processor implements MethodDecorator.Factory
         return null;
     }
     @Override
-    public void before(Request request, Response response) throws IOException {
+    public void beforeServe(Request request, Response response) throws IOException {
         // we will recover a user here
         CallSession css=CallSession.getInstance();
         AppSession ass=(AppSession) css.getAppSession();
@@ -104,11 +130,7 @@ public class SecurityPolicy extends Processor implements MethodDecorator.Factory
         }
     }
     @Override
-    public void after(Request request, Response response) throws IOException {
-    }
-    @Override
-    public void serve(Request request, Response response) throws IOException {
-        // nothing to do here
+    public void afterServe(Request request, Response response) throws IOException {
     }
     /** authenticates or establishes user based on user and password.
      * same as loadActor but with first param being admin account.
@@ -213,7 +235,7 @@ public class SecurityPolicy extends Processor implements MethodDecorator.Factory
     @Override
     public MethodDecorator assertDecorator(MethodEndPoint mep, Annotation ann) {
         if(!(ann instanceof Secured)) return null;
-        System.out.println("Assert decorator for:"+mep.getPath());
+        log().debug("Assert decorator for:{}",mep.getPath());
         String verb=mep.getVerb();
         String path=mep.getPath();
         String pat=RouteDetector.toPattern(verb, path);

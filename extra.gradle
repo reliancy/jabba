@@ -92,16 +92,31 @@ class Server implements Runnable{
     info("stopping server");
     if(driver!=null){
       driver.interrupt();
-      //driver.join();
+      try{
+        driver.join(5000); // Wait up to 5 seconds for graceful shutdown
+      }catch(InterruptedException e){
+        info("interrupted while waiting for driver to stop");
+      }
     }
+    // Clean up stale threads using proper interruption
     for(Thread th:Thread.getAllStackTraces().keySet()){
       if(th.getName().equalsIgnoreCase("executor")){
         info("cleaning up stale driver:"+th.toString())
-        th.stop();
+        th.interrupt();
+        try{
+          th.join(2000); // Wait up to 2 seconds
+        }catch(InterruptedException e){
+          // Ignore
+        }
       }
       if(th.getName().equalsIgnoreCase("server.driver")){
         info("cleaning up stale driver:"+th.toString())
-        th.stop();
+        th.interrupt();
+        try{
+          th.join(2000); // Wait up to 2 seconds
+        }catch(InterruptedException e){
+          // Ignore
+        }
       }
     }
     return this;

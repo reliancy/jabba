@@ -14,27 +14,26 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import com.reliancy.jabba.decor.Async;
+import com.reliancy.jabba.decor.Routed;
+import com.reliancy.jabba.decor.WebSocket;
+
 /** Router is a special Processor which redirects requests to endpoints.
- * 
+ * Handles HTTP endpoints.
  */
 public class Router extends Processor{
-    HashMap<String,EndPoint> routes=new HashMap<>();      // route pattern to endpoint
+    HashMap<String,EndPoint> routes=new HashMap<>();      // HTTP route pattern to endpoint
     ArrayList<RouteDetector> detectors=new ArrayList<>(); // route patterns ordered
     int[] indexes;              // indexes for each route within regex
     Pattern regex;
 
     public Router() {
         super("Router");
-    }
-    @Override
-    public void before(Request request, Response response) throws IOException {
-    }
-    @Override
-    public void after(Request request, Response response) throws IOException {
     }
     @Override
     public void serve(Request req, Response resp) throws IOException {
@@ -44,25 +43,26 @@ public class Router extends Processor{
         log().info("serving:{}",path);
         Matcher m=match(verb,path);
         //Matcher m=rep.match("GET","/helloP");
-        if(m!=null){
-            //HashMap<String,String> pms=new HashMap<>();
-            String rt=evalMatcher(m,req.getPathParams());
-            //System.out.println(req.getPathParams());
-            EndPoint ep=getRoute(rt);
-            if(ep!=null){
-                ep.process(req, resp);
-            }else{
-                log().error("no endpoint for:{}",rt);
-                resp.setContentType("text/plain;charset=utf-8");
-                resp.setStatus(Response.HTTP_NOT_FOUND);
-                resp.getEncoder().writeln("no endpoint for :"+rt);
-            }
-        }else{
+        if(m==null){
             log().error("could not resolve path:{}",path);
             resp.setContentType("text/plain;charset=utf-8");
             resp.setStatus(Response.HTTP_NOT_FOUND);
             resp.getEncoder().writeln("could not resolve path:"+path);
+            //return isAsync()?CompletableFuture.completedFuture(null):null;
+            return;
         }
+        String rt=evalMatcher(m,req.getPathParams());
+        EndPoint ep=getRoute(rt);
+        if(ep==null){
+            log().error("no endpoint for:{}",rt);
+            resp.setContentType("text/plain;charset=utf-8");
+            resp.setStatus(Response.HTTP_NOT_FOUND);
+            resp.getEncoder().writeln("no endpoint for :"+rt);
+            //return isAsync()?CompletableFuture.completedFuture(null):null;
+            return;
+        }
+        log().info("Router: matched route={}, endpoint={}", rt, ep != null ? ep.getId() : "null");
+        ep.process(req, resp);
     }
     /** Lookup of endpoints by full routing string.
      * that includes verb.
@@ -158,25 +158,31 @@ public class Router extends Processor{
     }
     /**
      * Will import endpoints to serve various paths.
+     * Scans for @Routed (HTTP) annotations.
      * We can call this multiple times for multiple targets.
      * @param target
      * @return
      */
     public Router importMethods(Object target){
         //RoutedEndPoint ret=new RoutedEndPoint();
-        LinkedList<Method> routes=new LinkedList<>();
+        LinkedList<Method> httpRoutes=new LinkedList<>();
         Class<?> type=target.getClass();
         while (type != null) {
             for(Method m : type.getDeclaredMethods()){
                 //System.out.println("Method:"+m.toString());
                 if(m.getAnnotation(Routed.class)!=null){
-                    routes.add(0,m);
+                    httpRoutes.add(0,m);
                 }
             }
             type = type.getSuperclass();
         }
-        for(Method m:routes){
+        // Process HTTP routes
+        for(Method m:httpRoutes){
             MethodEndPoint mm=new MethodEndPoint(target,m);
+            // Check for @Async annotation and set async flag
+            if(m.getAnnotation(Async.class)!=null){
+                mm.setAsync(true);
+            }
             addRoute(mm.getVerb(),mm.getPath(),mm);
         }
         return this;

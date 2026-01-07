@@ -115,7 +115,9 @@ public final class SQL implements Appendable{
             String alias=getAlias(e);
             //System.out.println("It:"+index+":/"+f+"/"+e+"/"+alias);
             append(index==0?" ":",");
-            append(alias).append(".").id(f.getName());
+            // Use getId() if set (database column name), otherwise use getName()
+            String colName=(f.getId()!=null && !f.getId().isEmpty())?f.getId():f.getName();
+            append(alias).append(".").id(colName);
         }
         from();
         String eAlias=getAlias(ent);
@@ -127,9 +129,12 @@ public final class SQL implements Appendable{
             on();
             Field bPk=b.getPk();
             Field ePk=ent.getPk();
-            append(eAlias).append(".").id(ePk.getName());
+            // Use getId() if set (database column name), otherwise use getName()
+            String ePkName=(ePk.getId()!=null && !ePk.getId().isEmpty())?ePk.getId():ePk.getName();
+            String bPkName=(bPk.getId()!=null && !bPk.getId().isEmpty())?bPk.getId():bPk.getName();
+            append(eAlias).append(".").id(ePkName);
             append("=");
-            append(bAlias).append(".").id(bPk.getName());
+            append(bAlias).append(".").id(bPkName);
         }
         return this;
     }
@@ -154,7 +159,9 @@ public final class SQL implements Appendable{
         if(filter.isLeaf()){
             Check.Op op=filter.getCode();
             Field field=filter.getField();
-            String fname=wrap(filter.getField().getName());
+            // Use getId() if set (database column name), otherwise use getName()
+            String fieldName=(field.getId()!=null && !field.getId().isEmpty())?field.getId():field.getName();
+            String fname=wrap(fieldName);
             String opname=op.toString();
             String arg="?";
             Object val=filter.getValue();
@@ -236,14 +243,16 @@ public final class SQL implements Appendable{
         String delim="";
         Field pk=entity.getPk();
         if(!entity.isOwned(pk)){
-            append(delim).id(pk.getName());
+            String pkName=(pk.getId()!=null && !pk.getId().isEmpty())?pk.getId():pk.getName();
+            append(delim).id(pkName);
             ext.append(delim).append("?");
             delim=",";
         }
         for(int index=0;index<supplied.size();index++){
             Field f=supplied.get(index);
             if(index>0) delim=",";
-            append(delim).id(f.getName());
+            String fName=(f.getId()!=null && !f.getId().isEmpty())?f.getId():f.getName();
+            append(delim).id(fName);
             ext.append(delim).append("?");
         }
         append(") VALUES (").append(ext).append(")");
@@ -256,11 +265,13 @@ public final class SQL implements Appendable{
             Field f=supplied.get(index);
             String delim=index==0?"":",";
             append(delim);
-            id(f.getName()).append("=?");
+            String fName=(f.getId()!=null && !f.getId().isEmpty())?f.getId():f.getName();
+            id(fName).append("=?");
         }
         where();
         Field pk=entity.getPk();
-        id(pk.getName()).append("=?");
+        String pkName=(pk.getId()!=null && !pk.getId().isEmpty())?pk.getId():pk.getName();
+        id(pkName).append("=?");
         return this;
     }
     public final SQL delete(Entity entity){

@@ -90,7 +90,44 @@ public class FileConfig extends Config.Base{
                 if(changing) p.setString(this,sval);
             }
         }while(changing && iterations<7);
+        // Validate configuration
+        validate();
         return this;
+    }
+    /**
+     * Validates configuration values after loading.
+     * @throws IllegalArgumentException if validation fails
+     */
+    protected void validate() throws IllegalArgumentException{
+        // Validate SERVER_PORT if present
+        if(hasProperty(Config.SERVER_PORT)){
+            Integer port=getProperty(Config.SERVER_PORT,null);
+            if(port!=null && (port<1 || port>65535)){
+                throw new IllegalArgumentException("SERVER_PORT must be between 1 and 65535, got: "+port);
+            }
+        }
+        // Validate LOG_LEVEL if present
+        if(hasProperty(Config.LOG_LEVEL)){
+            String level=getProperty(Config.LOG_LEVEL,"");
+            if(!level.isEmpty() && !isValidLogLevel(level)){
+                throw new IllegalArgumentException("Invalid LOG_LEVEL: "+level+". Must be one of: TRACE, DEBUG, INFO, WARN, ERROR");
+            }
+        }
+        // Validate required properties from schema
+        for(Property<?> p:getSchema()){
+            if(p.isRequired() && !hasProperty(p)){
+                throw new IllegalArgumentException("Required property '"+p.getName()+"' is missing");
+            }
+        }
+    }
+    /**
+     * Checks if log level is valid.
+     */
+    protected boolean isValidLogLevel(String level){
+        if(level==null) return false;
+        String upper=level.toUpperCase();
+        return "TRACE".equals(upper) || "DEBUG".equals(upper) || 
+               "INFO".equals(upper) || "WARN".equals(upper) || "ERROR".equals(upper);
     }
     @Override
     public Config save() throws IOException{

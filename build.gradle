@@ -12,28 +12,36 @@ apply from: 'extra.gradle'
 
 project.buildDir = 'target'
 group='com.reliancy'
-version = '0.3-SNAPSHOT'
+version = '2.0.0-SNAPSHOT'
 application{
   mainClass=(group+'.'+name+'.JettyApp')
 }
 java{
-  // make our library a bit more compatible (jetty forced 11 else it would have been 1.8)
-  sourceCompatibility = JavaVersion.VERSION_11
-  targetCompatibility = JavaVersion.VERSION_11
+  // Updated to Java 21 for modern features and better performance
+  sourceCompatibility = JavaVersion.VERSION_21
+  targetCompatibility = JavaVersion.VERSION_21
+}
+
+tasks.withType(JavaCompile) {
+    options.compilerArgs << '-parameters'
 }
 
 dependencies {
-  def jettyVersion="11.0.18"
+  def jettyVersion="12.0.15"
     implementation "org.eclipse.jetty:jetty-server:${jettyVersion}"
-    implementation "org.eclipse.jetty.http2:http2-server:${jettyVersion}"
-    implementation "org.slf4j:slf4j-jdk14:2.0.10"
-    //implementation "org.slf4j:slf4j-simple:2.0.10"
+    implementation "org.eclipse.jetty.http2:jetty-http2-server:${jettyVersion}"
+    implementation "org.eclipse.jetty.ee10:jetty-ee10-servlet:${jettyVersion}"
+    implementation "org.eclipse.jetty.ee10.websocket:jetty-ee10-websocket-jakarta-server:${jettyVersion}"
+    implementation "jakarta.servlet:jakarta.servlet-api:6.0.0"
+    implementation "org.slf4j:slf4j-jdk14:2.0.16"
+    //implementation "org.slf4j:slf4j-simple:2.0.16"
     //implementation 'com.hubspot.jinjava:jinjava:2.5.10'
-    implementation 'com.github.jknack:handlebars:4.3.0'
-    implementation 'com.h2database:h2:2.1.214'
-    implementation 'org.postgresql:postgresql:42.5.0'
-    implementation 'com.zaxxer:HikariCP:5.0.0'
-    testImplementation "junit:junit:4.12"
+    implementation 'com.github.jknack:handlebars:4.4.0'
+    implementation 'com.h2database:h2:2.3.232'
+    implementation 'org.postgresql:postgresql:42.7.4'
+    implementation 'com.zaxxer:HikariCP:5.1.0'
+    testImplementation "junit:junit:4.13.2"
+    testImplementation "org.eclipse.jetty.websocket:jetty-websocket-jetty-client:${jettyVersion}"
 }
 
 sourceSets {
@@ -59,7 +67,7 @@ processResources {
 }
 repositories { 
     //mavenLocal()
-    //mavenCentral()
+    mavenCentral()
     maven{
       url "https://repo.reliancy.com/repository/maven-hub"
     }
@@ -152,4 +160,15 @@ eclipse{
       }
     }
   }
+}
+
+// Task to run DemoApp demonstration application
+task runDemo(type: JavaExec, dependsOn: testClasses) {
+    group = 'application'
+    description = 'Run the DemoApp demonstration application'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.reliancy.jabba.DemoApp'
+    args = project.hasProperty('appArgs') ? project.appArgs.split('\\s+') : []
+    workingDir = projectDir
+    standardInput = System.in
 }
