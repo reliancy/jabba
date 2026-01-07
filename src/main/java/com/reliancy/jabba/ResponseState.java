@@ -9,7 +9,7 @@ package com.reliancy.jabba;
 
 /**
  * Represents the lifecycle state of a Response object.
- * Response goes through stages: created -> configuring -> committed -> writing <-> written -> completed
+ * Response goes through stages: created -&gt; configuring -&gt; committed -&gt; writing &lt;-&gt; written -&gt; completed
  */
 public enum ResponseState {
     /** Response object created, nothing configured yet */

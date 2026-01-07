@@ -196,11 +196,9 @@ public class ResponseEncoder implements Appendable,Closeable{
      * for json,xml and plain we render into a message template for the rest we do nothing.
      * this method returns true if a response was generated. in overloaded methods
      * if false is returned we can generate response the status is set to 500 already.
-     * @param req incoming request
      * @param ex exception state
-     * @param resp response to generate
-     * @return true if handled else it signifies we should do somthing in overloads.
-     * @throws IOException
+     * @return this encoder for chaining
+     * @throws IOException if writing the error response fails
      */
     public ResponseEncoder writeError(Throwable ex) throws IOException{
         log().error("error:",ex);

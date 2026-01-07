@@ -17,7 +17,7 @@ import java.util.concurrent.Executor;
  * For example request and response objects are accessible.
  * The session is updated at process phase of each processor.
  * 
- * <h3>Instance Counting and Multi-Threading</h3>
+ * <h2>Instance Counting and Multi-Threading</h2>
  * CallSession tracks how many threads are currently using it via an atomic counter.
  * This enables safe async processing where a single session is shared across multiple threads:
  * 
